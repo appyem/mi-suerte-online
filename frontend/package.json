@@ -1,8 +1,8 @@
 ﻿{
   "name": "mi-suerte-online",
   "version": "1.0.0",
-  "description": "Sistema de venta de chance",
-  "main": "App.jsx",
+  "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -13,8 +13,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "vite": "^4.0.0",
-    "vite-plugin-html": "^3.2.0",
-    "@vitejs/plugin-react": "^3.0.0"
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.0.0"
   }
 }
