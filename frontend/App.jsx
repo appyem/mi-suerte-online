@@ -7,10 +7,7 @@ const App = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [lotteries, setLotteries] = useState([]);
-  const [sellers, setSellers] = useState([
-    { id: 1, username: 'vendedor1', password: 'pass123', active: true, name: 'Juan Pérez', commission: 10 },
-    { id: 2, username: 'vendedor2', password: 'pass456', active: true, name: 'María Gómez', commission: 12 },
-  ]);
+  const [sellers, setSellers] = useState([]);
   const [pendingBets, setPendingBets] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [currentBet, setCurrentBet] = useState({ lottery: '', digits: '2', number: '', amount: '' });
@@ -180,21 +177,41 @@ const App = () => {
     }
   };
 
-  // Función para cargar vendedores del backend
+  // Función para cargar vendedores del backend (base de datos)
   const loadSellers = async () => {
     try {
       const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers');
-      const sellersData = await response.json();
-      setSellers(sellersData);
+      if (response.ok) {
+        const sellersData = await response.json();
+        setSellers(sellersData);
+      }
     } catch (error) {
       console.error('Error al cargar vendedores:', error);
-      // Mantener vendedores por defecto como respaldo
-      setSellers([
-        { id: 1, username: 'vendedor1', password: 'pass123', active: true, name: 'Juan Pérez', commission: 10 },
-        { id: 2, username: 'vendedor2', password: 'pass456', active: true, name: 'María Gómez', commission: 12 }
-      ]);
     }
   };
+
+  // Cargar tickets del backend
+  const loadTickets = async () => {
+    try {
+      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/tickets');
+      if (response.ok) {
+        const ticketsData = await response.json();
+        setTickets(ticketsData);
+      }
+    } catch (error) {
+      console.error('Error al cargar tickets:', error);
+    }
+  };
+
+  // Cargar datos cuando el usuario inicia sesión
+  useEffect(() => {
+    if (userRole === 'admin') {
+      loadSellers();
+      loadTickets();
+    } else if (userRole === 'seller') {
+      loadTickets();
+    }
+  }, [userRole]);
 
   const handleAddBet = () => {
     if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
@@ -285,7 +302,7 @@ const App = () => {
     };
     
     try {
-      // ¡ENVÍA EL TICKET AL SERVIDOR!
+      // Guardar en base de datos
       const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/tickets', {
         method: 'POST',
         headers: {
@@ -299,9 +316,11 @@ const App = () => {
       }
       
       const savedTicket = await response.json();
-      console.log('Ticket guardado:', savedTicket);
       
-      // Generar mensaje para WhatsApp (tu lógica existente)
+      // También actualizar el estado local para mostrar en el dashboard
+      setTickets(prev => [...prev, savedTicket]);
+      
+      // Generar mensaje para WhatsApp
       let whatsappMessage = `¡Gracias por jugar con Mi Suerte Online! 🍀\n\n`;
       whatsappMessage += `Tiquete: ${ticket.ticketId}\n`;
       whatsappMessage += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
@@ -349,7 +368,7 @@ const App = () => {
     reportMessage += `Detalles de Ventas:\n`;
     
     todayTickets.forEach((ticket, index) => {
-      reportMessage += `\nTiquete #${index + 1}: ${ticket.id}\n`;
+      reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
       reportMessage += `Total: $${ticket.total.toLocaleString()}\n`;
       ticket.bets.forEach((bet, betIndex) => {
         reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
@@ -633,37 +652,37 @@ const App = () => {
     window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
-  // Añadir nuevo vendedor
-  const addNewSeller = () => {
+  // Añadir nuevo vendedor (guardar en base de datos)
+  const addNewSeller = async () => {
     if (!newSeller.name || !newSeller.username || !newSeller.password) {
       alert('Por favor complete todos los campos');
       return;
     }
     
-    if (sellers.some(s => s.username === newSeller.username)) {
-      alert('El nombre de usuario ya existe');
-      return;
+    try {
+      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newSeller),
+      });
+      
+      if (response.ok) {
+        const savedSeller = await response.json();
+        setSellers([...sellers, savedSeller]);
+        setNewSeller({ name: '', username: '', password: '', commission: 10 });
+        setShowAddSellerModal(false);
+        alert('Vendedor añadido exitosamente');
+      } else {
+        const error = await response.json();
+        alert('Error al crear vendedor: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión al crear vendedor');
     }
-    
-    const newSellerData = {
-      id: Date.now(),
-      ...newSeller,
-      active: true,
-      commission: parseInt(newSeller.commission)
-    };
-    
-    setSellers([...sellers, newSellerData]);
-    setNewSeller({ name: '', username: '', password: '', commission: 10 });
-    setShowAddSellerModal(false);
-    alert('Vendedor añadido exitosamente');
   };
-
-  // Cargar vendedores cuando sea admin
-  useEffect(() => {
-    if (userRole === 'admin') {
-      loadSellers();
-    }
-  }, [userRole]);
 
   if (showLogin) {
     return (
