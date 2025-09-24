@@ -151,25 +151,48 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     
-    if (username === 'superadmin' && password === 'Appy2025') {
-      setUserRole('admin');
-      setCurrentUser({ username: 'superadmin', role: 'admin' });
-      setShowLogin(false);
-      alert('Bienvenido al panel de administrador');
-    } else if (sellers.find(s => s.username === username && s.password === password && s.active)) {
-      setUserRole('seller');
-      setCurrentUser({ username, role: 'seller' });
-      setShowLogin(false);
-    } else {
-      alert('Credenciales incorrectas. Por favor verifique:');
-      if (username === 'superadmin') {
-        alert('Administrador: usuario=superadmin, contraseña=Appy2025');
+    try {
+      // Llamada al backend para autenticación
+      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setUserRole(data.role);
+        setCurrentUser({ username: data.username, role: data.role });
+        setShowLogin(false);
+        alert(`Bienvenido, ${data.role === 'admin' ? 'Administrador' : 'Vendedor'}`);
       } else {
-        alert('Vendedores disponibles: vendedor1/pass123, vendedor2/pass456');
+        alert(data.message || 'Credenciales incorrectas');
       }
+    } catch (error) {
+      console.error('Error de conexión:', error);
+      alert('Error de conexión. Verifica que el backend esté funcionando.');
+    }
+  };
+
+  // Función para cargar vendedores del backend
+  const loadSellers = async () => {
+    try {
+      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers');
+      const sellersData = await response.json();
+      setSellers(sellersData);
+    } catch (error) {
+      console.error('Error al cargar vendedores:', error);
+      // Mantener vendedores por defecto como respaldo
+      setSellers([
+        { id: 1, username: 'vendedor1', password: 'pass123', active: true, name: 'Juan Pérez', commission: 10 },
+        { id: 2, username: 'vendedor2', password: 'pass456', active: true, name: 'María Gómez', commission: 12 }
+      ]);
     }
   };
 
@@ -187,6 +210,13 @@ const App = () => {
     }
     
     const amount = parseInt(currentBet.amount);
+    
+    // 🔒 NUEVA REGLA: Chance de 4 cifras máximo $5,000
+    if (digits === 4 && amount > 5000) {
+      alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
+      return;
+    }
+    
     if (amount > 20000) {
       const newPendingBet = {
         id: Date.now(),
@@ -627,6 +657,13 @@ const App = () => {
     setShowAddSellerModal(false);
     alert('Vendedor añadido exitosamente');
   };
+
+  // Cargar vendedores cuando sea admin
+  useEffect(() => {
+    if (userRole === 'admin') {
+      loadSellers();
+    }
+  }, [userRole]);
 
   if (showLogin) {
     return (
