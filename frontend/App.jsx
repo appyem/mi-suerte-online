@@ -837,6 +837,7 @@ const App = () => {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contraseña</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -847,6 +848,7 @@ const App = () => {
                       <tr key={seller._id}>
                         <td className="px-6 py-4 whitespace-nowrap font-medium">{seller.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{seller.username}</td>
+                        <td className="px-6 py-4 whitespace-nowrap font-mono bg-gray-50">{seller.password}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{seller.commission}%</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
