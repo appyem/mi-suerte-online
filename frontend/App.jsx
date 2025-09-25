@@ -1,7 +1,4 @@
-﻿¡Claro! Aquí tienes el código completo de `App.jsx` con todas las funcionalidades y actualizaciones que hemos implementado:
-
-```jsx
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 
 const App = () => {
   const [userRole, setUserRole] = useState(null);
@@ -18,7 +15,7 @@ const App = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
-  const [reportFilter, setReportFilter] = useState(new Date().toISOString().split('T')[0]);
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [payments, setPayments] = useState([]);
@@ -79,6 +76,7 @@ const App = () => {
 
   // Función para determinar si hoy es festivo (simulado)
   const isHoliday = () => {
+    // Esta es una simulación. En una aplicación real, se conectaría a una API de festivos
     const holidays = [
       '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25'
     ];
@@ -92,19 +90,19 @@ const App = () => {
   // Función para obtener el horario correcto según el día y si es festivo
   const getLotteryTime = (lottery) => {
     const today = new Date();
-    const dayOfWeek = today.getDay();
+    const dayOfWeek = today.getDay(); // 0 = Domingo, 1 = Lunes, etc.
     const holiday = isHoliday();
     
     if (holiday && lottery.holidayTime) {
       return lottery.holidayTime;
-    } else if (dayOfWeek === 6 && lottery.saturdayTime) {
+    } else if (dayOfWeek === 6 && lottery.saturdayTime) { // Sábado
       return lottery.saturdayTime;
-    } else if (dayOfWeek === 0 && lottery.sundayTime) {
+    } else if (dayOfWeek === 0 && lottery.sundayTime) { // Domingo
       return lottery.sundayTime;
     } else if (lottery.days.includes(dayOfWeek)) {
       return lottery.time;
     }
-    return null;
+    return null; // No se juega hoy
   };
 
   // Inicializar loterías con sus horarios actuales
@@ -146,7 +144,7 @@ const App = () => {
           active: nowTime < fiveMinutesBefore
         };
       }));
-    }, 60000);
+    }, 60000); // Actualizar cada minuto
 
     return () => clearInterval(interval);
   }, []);
@@ -155,6 +153,7 @@ const App = () => {
     e.preventDefault();
     
     try {
+      // Llamada al backend para autenticación
       const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/login', {
         method: 'POST',
         headers: {
@@ -179,38 +178,13 @@ const App = () => {
     }
   };
 
-  // Función para cargar vendedores del backend
-  const loadSellers = async () => {
-    try {
-      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers');
-      if (response.ok) {
-        const sellersData = await response.json();
-        setSellers(sellersData);
-      }
-    } catch (error) {
-      console.error('Error al cargar vendedores:', error);
-    }
-  };
-
-  // Cargar tickets del backend
-  const loadTickets = async () => {
-    try {
-      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/tickets');
-      if (response.ok) {
-        const ticketsData = await response.json();
-        setTickets(ticketsData);
-      }
-    } catch (error) {
-      console.error('Error al cargar tickets:', error);
-    }
-  };
-
   const handleAddBet = () => {
     if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
       alert('Por favor complete todos los campos');
       return;
     }
     
+    // Validar que el número tenga la cantidad correcta de dígitos
     const digits = parseInt(currentBet.digits);
     if (currentBet.number.length !== digits) {
       alert(`El número debe tener exactamente ${digits} dígitos`);
@@ -219,6 +193,7 @@ const App = () => {
     
     const amount = parseInt(currentBet.amount);
     
+    // 🔒 NUEVA REGLA: Chance de 4 cifras máximo $5,000
     if (digits === 4 && amount > 5000) {
       alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
       return;
@@ -252,6 +227,7 @@ const App = () => {
     if (bet) {
       setBetList([...betList, { ...bet, status: 'approved' }]);
       setPendingBets(pendingBets.filter(b => b.id !== betId));
+      // Simular notificación sonora
       const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
       audio.play();
     }
@@ -259,6 +235,7 @@ const App = () => {
 
   const handleRejectBet = (betId) => {
     setPendingBets(pendingBets.filter(b => b.id !== betId));
+    // Simular notificación sonora
     const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alert-quick-chime-766.mp3');
     audio.play();
   };
@@ -290,6 +267,7 @@ const App = () => {
     };
     
     try {
+      // Guardar en base de datos
       const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/tickets', {
         method: 'POST',
         headers: {
@@ -305,6 +283,9 @@ const App = () => {
       const savedTicket = await response.json();
       setTickets(prev => [...prev, savedTicket]);
       
+      // Preguntar cómo enviar el ticket
+      const sendMethod = window.confirm('¿Enviar ticket por WhatsApp (Aceptar) o por SMS (Cancelar)?');
+      
       let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n\n`;
       message += `Tiquete: ${ticket.ticketId}\n`;
       message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
@@ -318,11 +299,11 @@ const App = () => {
       
       const fullPhoneNumber = customerPhone.startsWith('3') ? `57${customerPhone}` : `573${customerPhone}`;
       
-      const sendMethod = window.confirm('¿Enviar ticket por WhatsApp (Aceptar) o por SMS (Cancelar)?');
-      
       if (sendMethod) {
+        // Enviar por WhatsApp
         window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
       } else {
+        // Enviar por SMS (solo funciona en dispositivos móviles)
         window.open(`sms:${fullPhoneNumber}?body=${encodeURIComponent(message)}`, '_blank');
       }
       
@@ -338,6 +319,7 @@ const App = () => {
   const dailyClose = async () => {
     const today = new Date().toLocaleDateString('es-CO');
     
+    // Cargar tickets del día actual desde el backend
     try {
       const response = await fetch(`https://mi-suerte-online-backend.onrender.com/api/tickets?date=${today}&seller=${currentUser.username}`);
       const todayTickets = await response.json();
@@ -350,17 +332,20 @@ const App = () => {
         return;
       }
       
+      // Obtener comisión del vendedor
       const seller = sellers.find(s => s.username === currentUser.username);
       const commissionRate = seller ? seller.commission : 10;
       const commissionAmount = Math.round(totalSales * commissionRate / 100);
       const netAmount = totalSales - commissionAmount;
       
-      const reportPhone = prompt('Ingrese el número de teléfono para enviar el reporte (solo dígitos):', adminPhone.replace('+57', ''));
+      // Pedir número de teléfono para enviar el reporte
+      const reportPhone = prompt('Ingrese el número de teléfono para enviar el reporte (solo dígitos):', '');
       if (!reportPhone) {
         alert('Operación cancelada');
         return;
       }
       
+      // Generar reporte detallado
       let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊\n\n`;
       reportMessage += `Fecha: ${today}\n`;
       reportMessage += `Vendedor: ${currentUser.username}\n`;
@@ -378,6 +363,7 @@ const App = () => {
         });
       });
       
+      // Registrar pago en el backend
       const paymentResponse = await fetch('https://mi-suerte-online-backend.onrender.com/api/payments', {
         method: 'POST',
         headers: {
@@ -399,6 +385,7 @@ const App = () => {
         setPayments(prev => [...prev, payment]);
       }
       
+      // Enviar por WhatsApp
       const adminFullPhone = reportPhone.startsWith('3') ? `57${reportPhone}` : `573${reportPhone}`;
       window.open(`https://wa.me/${adminFullPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
       
@@ -417,6 +404,7 @@ const App = () => {
     setPassword('');
   };
 
+  // Manejar cambios en el número apostado para limitar dígitos
   const handleNumberChange = (value) => {
     const digits = parseInt(currentBet.digits);
     if (value.length <= digits) {
@@ -424,13 +412,75 @@ const App = () => {
     }
   };
 
-  const updateSellerCommission = (sellerId, commission) => {
-    setSellers(sellers.map(seller => 
-      seller.id === sellerId ? {...seller, commission: parseInt(commission)} : seller
-    ));
-    alert(`Comisión actualizada a ${commission}% para ${sellers.find(s => s.id === sellerId)?.name}`);
+  // Función para cargar vendedores del backend (base de datos)
+  const loadSellers = async () => {
+    try {
+      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers');
+      if (response.ok) {
+        const sellersData = await response.json();
+        setSellers(sellersData);
+      }
+    } catch (error) {
+      console.error('Error al cargar vendedores:', error);
+    }
   };
 
+  // Cargar tickets del backend
+  const loadTickets = async () => {
+    try {
+      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/tickets');
+      if (response.ok) {
+        const ticketsData = await response.json();
+        setTickets(ticketsData);
+      }
+    } catch (error) {
+      console.error('Error al cargar tickets:', error);
+    }
+  };
+
+  // Cargar datos cuando el usuario inicia sesión
+  useEffect(() => {
+    if (userRole === 'admin') {
+      loadSellers();
+      loadTickets();
+    } else if (userRole === 'seller') {
+      loadTickets();
+    }
+  }, [userRole]);
+
+  // Añadir nuevo vendedor (guardar en base de datos)
+  const addNewSeller = async () => {
+    if (!newSeller.name || !newSeller.username || !newSeller.password) {
+      alert('Por favor complete todos los campos');
+      return;
+    }
+    
+    try {
+      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newSeller),
+      });
+      
+      if (response.ok) {
+        const savedSeller = await response.json();
+        setSellers([...sellers, savedSeller]);
+        setNewSeller({ name: '', username: '', password: '', commission: 10 });
+        setShowAddSellerModal(false);
+        alert('Vendedor añadido exitosamente');
+      } else {
+        const error = await response.json();
+        alert('Error al crear vendedor: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión al crear vendedor');
+    }
+  };
+
+  // Reporte de números más jugados
   const getMostPlayedNumbers = () => {
     const numberCount = {};
     
@@ -447,6 +497,7 @@ const App = () => {
       .map(([number, count]) => ({ number, count }));
   };
 
+  // Reporte de vendedores con más ventas
   const getTopSellers = () => {
     const sellerSales = {};
     
@@ -463,6 +514,7 @@ const App = () => {
       }));
   };
 
+  // Reporte de pagos a vendedores
   const getSellerPayments = () => {
     const paymentSummary = {};
     
@@ -487,6 +539,7 @@ const App = () => {
     return Object.values(paymentSummary);
   };
 
+  // Generar reporte según tipo, fecha y vendedor
   const generateDetailedReport = async (type, date = new Date().toISOString().split('T')[0]) => {
     if (!type) {
       alert('Seleccione un tipo de reporte');
@@ -511,7 +564,10 @@ const App = () => {
     }
   };
 
+  // Descargar reporte como imagen
   const downloadReport = () => {
+    // En un entorno real, usaríamos html2canvas para convertir el reporte a imagen
+    // Aquí simulamos la descarga con un enlace
     const element = document.createElement("a");
     const file = new Blob([JSON.stringify(currentReport, null, 2)], {type: 'application/json'});
     element.href = URL.createObjectURL(file);
@@ -521,6 +577,7 @@ const App = () => {
     document.body.removeChild(element);
   };
 
+  // Enviar por WhatsApp
   const sendByWhatsApp = () => {
     let message = '';
     
@@ -555,6 +612,7 @@ const App = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  // Enviar por correo electrónico
   const sendByEmail = () => {
     let subject = `Reporte ${reportType === 'sales' ? 'de Ventas' : 'de Pagos'} - Mi Suerte Online`;
     let body = '';
@@ -589,46 +647,6 @@ const App = () => {
     
     window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
-
-  const addNewSeller = async () => {
-    if (!newSeller.name || !newSeller.username || !newSeller.password) {
-      alert('Por favor complete todos los campos');
-      return;
-    }
-    
-    try {
-      const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newSeller),
-      });
-      
-      if (response.ok) {
-        const savedSeller = await response.json();
-        setSellers([...sellers, savedSeller]);
-        setNewSeller({ name: '', username: '', password: '', commission: 10 });
-        setShowAddSellerModal(false);
-        alert('Vendedor añadido exitosamente');
-      } else {
-        const error = await response.json();
-        alert('Error al crear vendedor: ' + error.message);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error de conexión al crear vendedor');
-    }
-  };
-
-  useEffect(() => {
-    if (userRole === 'admin') {
-      loadSellers();
-      loadTickets();
-    } else if (userRole === 'seller') {
-      loadTickets();
-    }
-  }, [userRole]);
 
   if (showLogin) {
     return (
@@ -668,8 +686,6 @@ const App = () => {
             >
               Iniciar Sesión
             </button>
-            
-            
           </form>
         </div>
       </div>
@@ -679,6 +695,7 @@ const App = () => {
   if (userRole === 'admin') {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
@@ -697,6 +714,7 @@ const App = () => {
         </header>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Tabs de navegación */}
           <div className="border-b border-gray-200 mb-8">
             <nav className="flex space-x-8">
               {[
@@ -721,8 +739,10 @@ const App = () => {
             </nav>
           </div>
 
+          {/* Dashboard - Solo del día actual */}
           {activeTab === 'dashboard' && (
             <>
+              {/* Dashboard Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
@@ -754,6 +774,7 @@ const App = () => {
                 </div>
               </div>
 
+              {/* Pending Bets */}
               {pendingBets.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Apuestas Pendientes de Aprobación</h2>
@@ -791,8 +812,10 @@ const App = () => {
             </>
           )}
 
+          {/* Reportes Avanzados */}
           {activeTab === 'reports' && (
             <div className="space-y-8">
+              {/* Generador de Reportes mejorado */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Generador de Reportes</h2>
                 
@@ -813,8 +836,8 @@ const App = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Específica</label>
                     <input
                       type="date"
-                      value={reportFilter}
-                      onChange={(e) => setReportFilter(e.target.value)}
+                      value={reportDate}
+                      onChange={(e) => setReportDate(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
@@ -835,7 +858,7 @@ const App = () => {
                 </div>
                 
                 <button
-                  onClick={() => generateDetailedReport(reportType, reportFilter)}
+                  onClick={() => generateDetailedReport(reportType, reportDate)}
                   disabled={!reportType}
                   className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
                 >
@@ -843,6 +866,7 @@ const App = () => {
                 </button>
               </div>
 
+              {/* Números más jugados */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Números Más Jugados</h2>
                 <div className="overflow-x-auto">
@@ -874,6 +898,7 @@ const App = () => {
                 </div>
               </div>
 
+              {/* Vendedores con más ventas */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Vendedores con Más Ventas</h2>
                 <div className="overflow-x-auto">
@@ -907,6 +932,7 @@ const App = () => {
             </div>
           )}
 
+          {/* Gestión de Vendedores */}
           {activeTab === 'sellers' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
@@ -936,15 +962,7 @@ const App = () => {
                         <td className="px-6 py-4 whitespace-nowrap font-medium">{seller.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{seller.username}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <select
-                            value={seller.commission}
-                            onChange={(e) => updateSellerCommission(seller.id, e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1"
-                          >
-                            {[...Array(51)].map((_, i) => (
-                              <option key={i} value={i}>{i}%</option>
-                            ))}
-                          </select>
+                          {seller.commission}%
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -970,8 +988,38 @@ const App = () => {
             </div>
           )}
 
+          {/* Pagos a Vendedores */}
           {activeTab === 'payments' && (
             <div className="space-y-8">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Resumen de Pagos a Vendedores</h2>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas Totales</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión Total</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto a Pagar</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número de Pagos</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {getSellerPayments().map((payment, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap font-medium">{payment.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-green-600">${payment.totalSales.toLocaleString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-orange-600">${payment.totalCommission.toLocaleString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-bold">${payment.totalNet.toLocaleString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{payment.payments}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Pagos a Vendedores mejorado */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Pagos a Vendedores</h2>
                 
@@ -1016,34 +1064,7 @@ const App = () => {
                 )}
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Resumen de Pagos a Vendedores</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas Totales</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión Total</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto a Pagar</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número de Pagos</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {getSellerPayments().map((payment, index) => (
-                        <tr key={index}>
-                          <td className="px-6 py-4 whitespace-nowrap font-medium">{payment.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-green-600">${payment.totalSales.toLocaleString()}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-orange-600">${payment.totalCommission.toLocaleString()}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-bold">${payment.totalNet.toLocaleString()}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{payment.payments}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
+              {/* Detalle de Pagos */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Historial de Pagos</h2>
                 <div className="overflow-x-auto">
@@ -1076,6 +1097,7 @@ const App = () => {
             </div>
           )}
 
+          {/* Lottery Management */}
           {activeTab === 'lotteries' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Gestión de Loterías (Hoy)</h2>
@@ -1121,6 +1143,7 @@ const App = () => {
           )}
         </div>
 
+        {/* Modal de Reporte */}
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -1262,6 +1285,7 @@ const App = () => {
           </div>
         )}
 
+        {/* Modal para añadir nuevo vendedor */}
         {showAddSellerModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-md w-full">
@@ -1339,6 +1363,7 @@ const App = () => {
   if (userRole === 'seller') {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
@@ -1357,6 +1382,7 @@ const App = () => {
         </header>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Sale Panel */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Crear Nueva Apuesta</h2>
             
@@ -1388,7 +1414,7 @@ const App = () => {
                     setCurrentBet({
                       ...currentBet, 
                       digits: newDigits,
-                      number: currentBet.number.slice(0, parseInt(newDigits))
+                      number: currentBet.number.slice(0, parseInt(newDigits)) // Limitar dígitos al cambiar
                     });
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1424,6 +1450,9 @@ const App = () => {
                 {parseInt(currentBet.amount) > 20000 && (
                   <p className="text-yellow-600 text-sm mt-2">Esta apuesta requiere aprobación del administrador</p>
                 )}
+                {parseInt(currentBet.digits) === 4 && parseInt(currentBet.amount) > 5000 && (
+                  <p className="text-red-600 text-sm mt-2">Máximo $5,000 para 4 cifras</p>
+                )}
               </div>
             </div>
             
@@ -1437,6 +1466,7 @@ const App = () => {
             </div>
           </div>
 
+          {/* Bet List */}
           {betList.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
@@ -1474,6 +1504,7 @@ const App = () => {
             </div>
           )}
 
+          {/* Customer Info and Send Ticket */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
             <div className="mb-6">
@@ -1502,10 +1533,12 @@ const App = () => {
             </button>
           </div>
 
+          {/* Daily Close */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Cierre de Caja Diario</h3>
             <p className="text-gray-600 mb-4">Envía un reporte resumido del día al administrador por WhatsApp con el desglose de comisiones.</p>
             
+            {/* Mostrar comisión del vendedor */}
             {(() => {
               const seller = sellers.find(s => s.username === currentUser.username);
               if (seller) {
@@ -1531,6 +1564,7 @@ const App = () => {
             </button>
           </div>
 
+          {/* Modal de Confirmación */}
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
