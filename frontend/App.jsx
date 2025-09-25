@@ -669,14 +669,7 @@ const App = () => {
               Iniciar Sesión
             </button>
             
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-2">Credenciales de acceso:</h3>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p>🎯 <strong>Administrador:</strong> usuario=superadmin, contraseña=Appy2025</p>
-                <p>👤 <strong>Vendedor 1:</strong> usuario=vendedor1, contraseña=pass123</p>
-                <p>👤 <strong>Vendedor 2:</strong> usuario=vendedor2, contraseña=pass456</p>
-              </div>
-            </div>
+            
           </form>
         </div>
       </div>
