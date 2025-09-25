@@ -1,4 +1,7 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+﻿¡Claro! Aquí tienes el código completo de `App.jsx` con todas las funcionalidades y actualizaciones que hemos implementado:
+
+```jsx
+import React, { useState, useEffect, useRef } from 'react';
 
 const App = () => {
   const [userRole, setUserRole] = useState(null);
@@ -15,7 +18,7 @@ const App = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
-  const [reportFilter, setReportFilter] = useState('daily');
+  const [reportFilter, setReportFilter] = useState(new Date().toISOString().split('T')[0]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [payments, setPayments] = useState([]);
@@ -25,6 +28,7 @@ const App = () => {
   const [emailToSend, setEmailToSend] = useState('');
   const [showAddSellerModal, setShowAddSellerModal] = useState(false);
   const [newSeller, setNewSeller] = useState({ name: '', username: '', password: '', commission: 10 });
+  const [selectedSeller, setSelectedSeller] = useState('');
   const reportRef = useRef();
 
   // Definir todas las loterías con sus horarios
@@ -75,7 +79,6 @@ const App = () => {
 
   // Función para determinar si hoy es festivo (simulado)
   const isHoliday = () => {
-    // Esta es una simulación. En una aplicación real, se conectaría a una API de festivos
     const holidays = [
       '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25'
     ];
@@ -89,19 +92,19 @@ const App = () => {
   // Función para obtener el horario correcto según el día y si es festivo
   const getLotteryTime = (lottery) => {
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+    const dayOfWeek = today.getDay();
     const holiday = isHoliday();
     
     if (holiday && lottery.holidayTime) {
       return lottery.holidayTime;
-    } else if (dayOfWeek === 6 && lottery.saturdayTime) { // Sábado
+    } else if (dayOfWeek === 6 && lottery.saturdayTime) {
       return lottery.saturdayTime;
-    } else if (dayOfWeek === 0 && lottery.sundayTime) { // Domingo
+    } else if (dayOfWeek === 0 && lottery.sundayTime) {
       return lottery.sundayTime;
     } else if (lottery.days.includes(dayOfWeek)) {
       return lottery.time;
     }
-    return null; // No se juega hoy
+    return null;
   };
 
   // Inicializar loterías con sus horarios actuales
@@ -143,7 +146,7 @@ const App = () => {
           active: nowTime < fiveMinutesBefore
         };
       }));
-    }, 60000); // Actualizar cada minuto
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -152,7 +155,6 @@ const App = () => {
     e.preventDefault();
     
     try {
-      // Llamada al backend para autenticación
       const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/login', {
         method: 'POST',
         headers: {
@@ -177,7 +179,7 @@ const App = () => {
     }
   };
 
-  // Función para cargar vendedores del backend (base de datos)
+  // Función para cargar vendedores del backend
   const loadSellers = async () => {
     try {
       const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/sellers');
@@ -203,23 +205,12 @@ const App = () => {
     }
   };
 
-  // Cargar datos cuando el usuario inicia sesión
-  useEffect(() => {
-    if (userRole === 'admin') {
-      loadSellers();
-      loadTickets();
-    } else if (userRole === 'seller') {
-      loadTickets();
-    }
-  }, [userRole]);
-
   const handleAddBet = () => {
     if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
       alert('Por favor complete todos los campos');
       return;
     }
     
-    // Validar que el número tenga la cantidad correcta de dígitos
     const digits = parseInt(currentBet.digits);
     if (currentBet.number.length !== digits) {
       alert(`El número debe tener exactamente ${digits} dígitos`);
@@ -228,7 +219,6 @@ const App = () => {
     
     const amount = parseInt(currentBet.amount);
     
-    // 🔒 NUEVA REGLA: Chance de 4 cifras máximo $5,000
     if (digits === 4 && amount > 5000) {
       alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
       return;
@@ -262,7 +252,6 @@ const App = () => {
     if (bet) {
       setBetList([...betList, { ...bet, status: 'approved' }]);
       setPendingBets(pendingBets.filter(b => b.id !== betId));
-      // Simular notificación sonora
       const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
       audio.play();
     }
@@ -270,7 +259,6 @@ const App = () => {
 
   const handleRejectBet = (betId) => {
     setPendingBets(pendingBets.filter(b => b.id !== betId));
-    // Simular notificación sonora
     const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alert-quick-chime-766.mp3');
     audio.play();
   };
@@ -302,7 +290,6 @@ const App = () => {
     };
     
     try {
-      // Guardar en base de datos
       const response = await fetch('https://mi-suerte-online-backend.onrender.com/api/tickets', {
         method: 'POST',
         headers: {
@@ -316,28 +303,31 @@ const App = () => {
       }
       
       const savedTicket = await response.json();
-      
-      // También actualizar el estado local para mostrar en el dashboard
       setTickets(prev => [...prev, savedTicket]);
       
-      // Generar mensaje para WhatsApp
-      let whatsappMessage = `¡Gracias por jugar con Mi Suerte Online! 🍀\n\n`;
-      whatsappMessage += `Tiquete: ${ticket.ticketId}\n`;
-      whatsappMessage += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
-      whatsappMessage += `Vendedor: ${ticket.seller}\n`;
-      whatsappMessage += `Total: $${ticket.total.toLocaleString()}\n\n`;
-      whatsappMessage += `Detalles de apuestas:\n`;
+      let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n\n`;
+      message += `Tiquete: ${ticket.ticketId}\n`;
+      message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
+      message += `Vendedor: ${ticket.seller}\n`;
+      message += `Total: $${ticket.total.toLocaleString()}\n\n`;
+      message += `Detalles de apuestas:\n`;
       
       ticket.bets.forEach((bet, index) => {
-        whatsappMessage += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
+        message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
       });
       
       const fullPhoneNumber = customerPhone.startsWith('3') ? `57${customerPhone}` : `573${customerPhone}`;
-      window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+      
+      const sendMethod = window.confirm('¿Enviar ticket por WhatsApp (Aceptar) o por SMS (Cancelar)?');
+      
+      if (sendMethod) {
+        window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+      } else {
+        window.open(`sms:${fullPhoneNumber}?body=${encodeURIComponent(message)}`, '_blank');
+      }
       
       setBetList([]);
       setCustomerPhone('');
-      
       alert('¡Ticket generado y guardado exitosamente!');
     } catch (error) {
       console.error('Error:', error);
@@ -345,54 +335,78 @@ const App = () => {
     }
   };
 
-  const dailyClose = () => {
-    const today = new Date().toLocaleDateString();
-    const todayTickets = tickets.filter(t => t.timestamp.includes(today) && t.seller === currentUser.username);
-    const totalSales = todayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-    const ticketCount = todayTickets.length;
+  const dailyClose = async () => {
+    const today = new Date().toLocaleDateString('es-CO');
     
-    // Obtener comisión del vendedor
-    const seller = sellers.find(s => s.username === currentUser.username);
-    const commissionRate = seller ? seller.commission : 10;
-    const commissionAmount = Math.round(totalSales * commissionRate / 100);
-    const netAmount = totalSales - commissionAmount;
-    
-    // Generar reporte detallado para el administrador
-    let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊\n\n`;
-    reportMessage += `Fecha: ${today}\n`;
-    reportMessage += `Vendedor: ${currentUser.username}\n`;
-    reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
-    reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
-    reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}\n`;
-    reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n\n`;
-    reportMessage += `Detalles de Ventas:\n`;
-    
-    todayTickets.forEach((ticket, index) => {
-      reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
-      reportMessage += `Total: $${ticket.total.toLocaleString()}\n`;
-      ticket.bets.forEach((bet, betIndex) => {
-        reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
+    try {
+      const response = await fetch(`https://mi-suerte-online-backend.onrender.com/api/tickets?date=${today}&seller=${currentUser.username}`);
+      const todayTickets = await response.json();
+      
+      const totalSales = todayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+      const ticketCount = todayTickets.length;
+      
+      if (ticketCount === 0) {
+        alert('No hay ventas para el día de hoy');
+        return;
+      }
+      
+      const seller = sellers.find(s => s.username === currentUser.username);
+      const commissionRate = seller ? seller.commission : 10;
+      const commissionAmount = Math.round(totalSales * commissionRate / 100);
+      const netAmount = totalSales - commissionAmount;
+      
+      const reportPhone = prompt('Ingrese el número de teléfono para enviar el reporte (solo dígitos):', adminPhone.replace('+57', ''));
+      if (!reportPhone) {
+        alert('Operación cancelada');
+        return;
+      }
+      
+      let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊\n\n`;
+      reportMessage += `Fecha: ${today}\n`;
+      reportMessage += `Vendedor: ${currentUser.username}\n`;
+      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
+      reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
+      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}\n`;
+      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n\n`;
+      reportMessage += `Detalles de Ventas:\n`;
+      
+      todayTickets.forEach((ticket, index) => {
+        reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
+        reportMessage += `Total: $${ticket.total.toLocaleString()}\n`;
+        ticket.bets.forEach((bet, betIndex) => {
+          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
+        });
       });
-    });
-    
-    // Registrar pago
-    const payment = {
-      id: Date.now(),
-      seller: currentUser.username,
-      date: today,
-      totalSales,
-      commissionRate,
-      commissionAmount,
-      netAmount,
-      ticketCount
-    };
-    setPayments([...payments, payment]);
-    
-    // Enviar por WhatsApp
-    const adminFullPhone = adminPhone.startsWith('3') ? `57${adminPhone}` : `573${adminPhone}`;
-    window.open(`https://wa.me/${adminFullPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
-    
-    alert('Reporte diario enviado exitosamente');
+      
+      const paymentResponse = await fetch('https://mi-suerte-online-backend.onrender.com/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          seller: currentUser.username,
+          date: today,
+          totalSales,
+          commissionRate,
+          commissionAmount,
+          netAmount,
+          ticketCount
+        }),
+      });
+      
+      if (paymentResponse.ok) {
+        const payment = await paymentResponse.json();
+        setPayments(prev => [...prev, payment]);
+      }
+      
+      const adminFullPhone = reportPhone.startsWith('3') ? `57${reportPhone}` : `573${reportPhone}`;
+      window.open(`https://wa.me/${adminFullPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
+      
+      alert('Reporte diario enviado exitosamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al generar el reporte diario');
+    }
   };
 
   const logout = () => {
@@ -403,7 +417,6 @@ const App = () => {
     setPassword('');
   };
 
-  // Manejar cambios en el número apostado para limitar dígitos
   const handleNumberChange = (value) => {
     const digits = parseInt(currentBet.digits);
     if (value.length <= digits) {
@@ -411,7 +424,6 @@ const App = () => {
     }
   };
 
-  // Función para actualizar comisión de vendedor
   const updateSellerCommission = (sellerId, commission) => {
     setSellers(sellers.map(seller => 
       seller.id === sellerId ? {...seller, commission: parseInt(commission)} : seller
@@ -419,7 +431,6 @@ const App = () => {
     alert(`Comisión actualizada a ${commission}% para ${sellers.find(s => s.id === sellerId)?.name}`);
   };
 
-  // Reporte de números más jugados
   const getMostPlayedNumbers = () => {
     const numberCount = {};
     
@@ -436,7 +447,6 @@ const App = () => {
       .map(([number, count]) => ({ number, count }));
   };
 
-  // Reporte de vendedores con más ventas
   const getTopSellers = () => {
     const sellerSales = {};
     
@@ -453,7 +463,6 @@ const App = () => {
       }));
   };
 
-  // Reporte de pagos a vendedores
   const getSellerPayments = () => {
     const paymentSummary = {};
     
@@ -478,100 +487,31 @@ const App = () => {
     return Object.values(paymentSummary);
   };
 
-  // Generar reporte según tipo y filtro
-  const generateDetailedReport = (type, filter = 'daily') => {
-    let reportData = {};
-    const today = new Date();
-    let startDate = new Date();
-    
-    // Calcular fecha de inicio según filtro
-    switch(filter) {
-      case 'daily':
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        break;
-      case 'weekly':
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
-        break;
-      case 'biweekly':
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 15);
-        break;
-      case 'monthly':
-        startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-        break;
-      default:
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const generateDetailedReport = async (type, date = new Date().toISOString().split('T')[0]) => {
+    if (!type) {
+      alert('Seleccione un tipo de reporte');
+      return;
     }
     
-    const formattedStartDate = startDate.toLocaleDateString('es-CO');
-    const formattedEndDate = today.toLocaleDateString('es-CO');
-    
-    switch(type) {
-      case 'sales':
-        const filteredTickets = tickets.filter(ticket => {
-          const ticketDate = new Date(ticket.timestamp);
-          return ticketDate >= startDate;
-        });
-        
-        const totalSales = filteredTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-        const ticketCount = filteredTickets.length;
-        
-        reportData = {
-          title: 'REPORTE DE VENTAS',
-          period: `${formattedStartDate} - ${formattedEndDate}`,
-          totalSales: totalSales.toLocaleString(),
-          ticketCount,
-          sellers: getTopSellers().map(seller => {
-            const sellerTickets = filteredTickets.filter(t => t.seller === seller.seller);
-            const sellerSales = sellerTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-            return {
-              ...seller,
-              sales: sellerSales.toLocaleString(),
-              tickets: sellerTickets.length
-            };
-          }),
-          mostPlayedNumbers: getMostPlayedNumbers().slice(0, 5)
-        };
-        break;
-        
-      case 'payments':
-        const filteredPayments = payments.filter(payment => {
-          const paymentDate = new Date(payment.date);
-          return paymentDate >= startDate;
-        });
-        
-        const totalPaid = filteredPayments.reduce((sum, payment) => sum + payment.netAmount, 0);
-        const totalCommission = filteredPayments.reduce((sum, payment) => sum + payment.commissionAmount, 0);
-        
-        reportData = {
-          title: 'REPORTE DE PAGOS A VENDEDORES',
-          period: `${formattedStartDate} - ${formattedEndDate}`,
-          totalPaid: totalPaid.toLocaleString(),
-          totalCommission: totalCommission.toLocaleString(),
-          paymentCount: filteredPayments.length,
-          sellers: getSellerPayments().map(seller => {
-            const sellerPayments = filteredPayments.filter(p => p.seller === seller.seller);
-            const sellerPaid = sellerPayments.reduce((sum, payment) => sum + payment.netAmount, 0);
-            const sellerCommission = sellerPayments.reduce((sum, payment) => sum + payment.commissionAmount, 0);
-            return {
-              ...seller,
-              paid: sellerPaid.toLocaleString(),
-              commission: sellerCommission.toLocaleString(),
-              payments: sellerPayments.length
-            };
-          })
-        };
-        break;
+    try {
+      let url = `https://mi-suerte-online-backend.onrender.com/api/reports?type=${type}&date=${date}`;
+      if (selectedSeller) {
+        url += `&seller=${selectedSeller}`;
+      }
+      
+      const response = await fetch(url);
+      const reportData = await response.json();
+      
+      setCurrentReport(reportData);
+      setReportType(type);
+      setShowReportModal(true);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al generar el reporte');
     }
-    
-    setCurrentReport(reportData);
-    setReportType(type);
-    setShowReportModal(true);
   };
 
-  // Descargar reporte como imagen
   const downloadReport = () => {
-    // En un entorno real, usaríamos html2canvas para convertir el reporte a imagen
-    // Aquí simulamos la descarga con un enlace
     const element = document.createElement("a");
     const file = new Blob([JSON.stringify(currentReport, null, 2)], {type: 'application/json'});
     element.href = URL.createObjectURL(file);
@@ -581,7 +521,6 @@ const App = () => {
     document.body.removeChild(element);
   };
 
-  // Enviar por WhatsApp
   const sendByWhatsApp = () => {
     let message = '';
     
@@ -616,7 +555,6 @@ const App = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // Enviar por correo electrónico
   const sendByEmail = () => {
     let subject = `Reporte ${reportType === 'sales' ? 'de Ventas' : 'de Pagos'} - Mi Suerte Online`;
     let body = '';
@@ -652,7 +590,6 @@ const App = () => {
     window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
-  // Añadir nuevo vendedor (guardar en base de datos)
   const addNewSeller = async () => {
     if (!newSeller.name || !newSeller.username || !newSeller.password) {
       alert('Por favor complete todos los campos');
@@ -683,6 +620,15 @@ const App = () => {
       alert('Error de conexión al crear vendedor');
     }
   };
+
+  useEffect(() => {
+    if (userRole === 'admin') {
+      loadSellers();
+      loadTickets();
+    } else if (userRole === 'seller') {
+      loadTickets();
+    }
+  }, [userRole]);
 
   if (showLogin) {
     return (
@@ -723,7 +669,6 @@ const App = () => {
               Iniciar Sesión
             </button>
             
-            {/* Información de acceso */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <h3 className="font-semibold text-blue-900 mb-2">Credenciales de acceso:</h3>
               <div className="text-sm text-blue-800 space-y-1">
@@ -741,7 +686,6 @@ const App = () => {
   if (userRole === 'admin') {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
@@ -760,7 +704,6 @@ const App = () => {
         </header>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Tabs de navegación */}
           <div className="border-b border-gray-200 mb-8">
             <nav className="flex space-x-8">
               {[
@@ -785,30 +728,39 @@ const App = () => {
             </nav>
           </div>
 
-          {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <>
-              {/* Dashboard Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-sm font-medium text-gray-500">Ventas Totales</h3>
-                  <p className="mt-2 text-3xl font-bold text-green-600">${tickets.reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}</p>
+                  <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
+                  <p className="mt-2 text-3xl font-bold text-green-600">
+                    ${tickets.filter(t => 
+                      new Date(t.timestamp).toLocaleDateString('es-CO') === new Date().toLocaleDateString('es-CO')
+                    ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
+                  </p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-sm font-medium text-gray-500">Tiquetes Vendidos</h3>
-                  <p className="mt-2 text-3xl font-bold text-blue-600">{tickets.length}</p>
+                  <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
+                  <p className="mt-2 text-3xl font-bold text-blue-600">
+                    {tickets.filter(t => 
+                      new Date(t.timestamp).toLocaleDateString('es-CO') === new Date().toLocaleDateString('es-CO')
+                    ).length}
+                  </p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-sm font-medium text-gray-500">Premios por Pagar</h3>
                   <p className="mt-2 text-3xl font-bold text-orange-600">$0</p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-sm font-medium text-gray-500">Balance General</h3>
-                  <p className="mt-2 text-3xl font-bold text-purple-600">${tickets.reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}</p>
+                  <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
+                  <p className="mt-2 text-3xl font-bold text-purple-600">
+                    ${tickets.filter(t => 
+                      new Date(t.timestamp).toLocaleDateString('es-CO') === new Date().toLocaleDateString('es-CO')
+                    ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
+                  </p>
                 </div>
               </div>
 
-              {/* Pending Bets */}
               {pendingBets.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Apuestas Pendientes de Aprobación</h2>
@@ -846,14 +798,12 @@ const App = () => {
             </>
           )}
 
-          {/* Reportes Avanzados */}
           {activeTab === 'reports' && (
             <div className="space-y-8">
-              {/* Generador de Reportes */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Generador de Reportes</h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte</label>
                     <select
@@ -867,16 +817,26 @@ const App = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
-                    <select
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Específica</label>
+                    <input
+                      type="date"
                       value={reportFilter}
                       onChange={(e) => setReportFilter(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor (Opcional)</label>
+                    <select
+                      value={selectedSeller}
+                      onChange={(e) => setSelectedSeller(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="daily">Diario</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="biweekly">Quincenal</option>
-                      <option value="monthly">Mensual</option>
+                      <option value="">Todos los vendedores</option>
+                      {sellers.map(seller => (
+                        <option key={seller.id} value={seller.username}>{seller.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -890,7 +850,6 @@ const App = () => {
                 </button>
               </div>
 
-              {/* Números más jugados */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Números Más Jugados</h2>
                 <div className="overflow-x-auto">
@@ -922,7 +881,6 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Vendedores con más ventas */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Vendedores con Más Ventas</h2>
                 <div className="overflow-x-auto">
@@ -956,7 +914,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Gestión de Vendedores */}
           {activeTab === 'sellers' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
@@ -991,11 +948,9 @@ const App = () => {
                             onChange={(e) => updateSellerCommission(seller.id, e.target.value)}
                             className="border border-gray-300 rounded px-2 py-1"
                           >
-                            <option value="5">5%</option>
-                            <option value="10">10%</option>
-                            <option value="12">12%</option>
-                            <option value="15">15%</option>
-                            <option value="20">20%</option>
+                            {[...Array(51)].map((_, i) => (
+                              <option key={i} value={i}>{i}%</option>
+                            ))}
                           </select>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -1022,9 +977,52 @@ const App = () => {
             </div>
           )}
 
-          {/* Pagos a Vendedores */}
           {activeTab === 'payments' && (
             <div className="space-y-8">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Pagos a Vendedores</h2>
+                
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Vendedor</label>
+                  <select
+                    value={selectedSeller}
+                    onChange={(e) => setSelectedSeller(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione un vendedor</option>
+                    {sellers.map(seller => (
+                      <option key={seller.id} value={seller.username}>{seller.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {selectedSeller && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-bold text-lg mb-2">Resumen de Pagos - {sellers.find(s => s.username === selectedSeller)?.name}</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Ventas Totales</p>
+                        <p className="text-green-600 font-bold">$0</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Comisión Total</p>
+                        <p className="text-orange-600 font-bold">$0</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Monto Pagado</p>
+                        <p className="text-blue-600 font-bold">$0</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Comisión (%)</p>
+                        <p className="text-purple-600 font-bold">
+                          {sellers.find(s => s.username === selectedSeller)?.commission || 0}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Resumen de Pagos a Vendedores</h2>
                 <div className="overflow-x-auto">
@@ -1053,33 +1051,6 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Generar Reporte de Pagos */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Generar Reporte de Pagos</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
-                    <select
-                      value={reportFilter}
-                      onChange={(e) => setReportFilter(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="daily">Diario</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="biweekly">Quincenal</option>
-                      <option value="monthly">Mensual</option>
-                    </select>
-                  </div>
-                </div>
-                <button
-                  onClick={() => generateDetailedReport('payments', reportFilter)}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
-                >
-                  Generar Reporte de Pagos
-                </button>
-              </div>
-
-              {/* Detalle de Pagos */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Historial de Pagos</h2>
                 <div className="overflow-x-auto">
@@ -1112,7 +1083,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Lottery Management */}
           {activeTab === 'lotteries' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Gestión de Loterías (Hoy)</h2>
@@ -1158,7 +1128,6 @@ const App = () => {
           )}
         </div>
 
-        {/* Modal de Reporte */}
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -1300,7 +1269,6 @@ const App = () => {
           </div>
         )}
 
-        {/* Modal para añadir nuevo vendedor */}
         {showAddSellerModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-md w-full">
@@ -1342,17 +1310,15 @@ const App = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Comisión (%)</label>
-                  <select
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
                     value={newSeller.commission}
                     onChange={(e) => setNewSeller({...newSeller, commission: e.target.value})}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="5">5%</option>
-                    <option value="10">10%</option>
-                    <option value="12">12%</option>
-                    <option value="15">15%</option>
-                    <option value="20">20%</option>
-                  </select>
+                    placeholder="0-50"
+                  />
                 </div>
               </div>
               
@@ -1380,7 +1346,6 @@ const App = () => {
   if (userRole === 'seller') {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
@@ -1399,7 +1364,6 @@ const App = () => {
         </header>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Sale Panel */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Crear Nueva Apuesta</h2>
             
@@ -1431,7 +1395,7 @@ const App = () => {
                     setCurrentBet({
                       ...currentBet, 
                       digits: newDigits,
-                      number: currentBet.number.slice(0, parseInt(newDigits)) // Limitar dígitos al cambiar
+                      number: currentBet.number.slice(0, parseInt(newDigits))
                     });
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1480,7 +1444,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* Bet List */}
           {betList.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
@@ -1518,7 +1481,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Customer Info and Send Ticket */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
             <div className="mb-6">
@@ -1543,16 +1505,14 @@ const App = () => {
               disabled={betList.length === 0}
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
             >
-              Generar y Enviar Tiquete por WhatsApp
+              Generar y Enviar Tiquete
             </button>
           </div>
 
-          {/* Daily Close */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Cierre de Caja Diario</h3>
             <p className="text-gray-600 mb-4">Envía un reporte resumido del día al administrador por WhatsApp con el desglose de comisiones.</p>
             
-            {/* Mostrar comisión del vendedor */}
             {(() => {
               const seller = sellers.find(s => s.username === currentUser.username);
               if (seller) {
@@ -1578,7 +1538,6 @@ const App = () => {
             </button>
           </div>
 
-          {/* Modal de Confirmación */}
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
