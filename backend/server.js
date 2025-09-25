@@ -6,8 +6,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 🔴 REEMPLAZA ESTA URL CON TU URI REAL DE MONGODB ATLAS
+const MONGODB_URI = 'mongodb+srv://adminuser:Appy2025@misuertecluster.hymrcja.mongodb.net/?retryWrites=true&w=majority&appName=MiSuerteCluster';
+
 // Conectar a MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://adminuser:Appy2025@misuertecluster.hymrcja.mongodb.net/?retryWrites=true&w=majority&appName=MiSuerteCluster', {
+mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -104,7 +107,6 @@ app.get('/api/tickets', async (req, res) => {
     let filter = {};
     
     if (date) {
-      // Convertir fecha YYYY-MM-DD a objeto Date
       const startDate = new Date(date);
       const endDate = new Date(date);
       endDate.setDate(endDate.getDate() + 1);
@@ -137,12 +139,10 @@ app.post('/api/sellers', async (req, res) => {
   try {
     const { name, username, password, commission = 10 } = req.body;
     
-    // Validar campos requeridos
     if (!name || !username || !password) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
     
-    // Verificar si el usuario ya existe
     const existingSeller = await Seller.findOne({ username });
     if (existingSeller) {
       return res.status(400).json({ error: 'El nombre de usuario ya existe' });
@@ -215,7 +215,7 @@ app.get('/api/payments', async (req, res) => {
   }
 });
 
-// Ruta para reportes (básica - puedes expandirla según necesidades)
+// Ruta para reportes
 app.get('/api/reports', async (req, res) => {
   try {
     const { type, date, seller } = req.query;
@@ -239,7 +239,6 @@ app.get('/api/reports', async (req, res) => {
       const totalSales = tickets.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = tickets.length;
       
-      // Obtener vendedores únicos y sus ventas
       const sellerSales = {};
       tickets.forEach(ticket => {
         sellerSales[ticket.seller] = (sellerSales[ticket.seller] || 0) + ticket.total;
