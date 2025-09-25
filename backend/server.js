@@ -48,42 +48,7 @@ const paymentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const Payment = mongoose.model('Payment', paymentSchema, 'payments');
-
-// Ruta para guardar un ticket
-app.post('/api/tickets', async (req, res) => {
-  try {
-    const ticket = new Ticket(req.body);
-    await ticket.save();
-    res.status(201).json(ticket);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Ruta para obtener tickets
-app.get('/api/tickets', async (req, res) => {
-  try {
-    const { date, seller } = req.query;
-    let filter = {};
-    
-    if (date) {
-      const startDate = new Date(date);
-      const endDate = new Date(date);
-      endDate.setDate(endDate.getDate() + 1);
-      filter.timestamp = { $gte: startDate, $lt: endDate };
-    }
-    
-    if (seller) {
-      filter.seller = seller;
-    }
-    
-    const tickets = await Ticket.find(filter).sort({ timestamp: -1 });
-    res.json(tickets);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+const Payment = mongoose.model('Payment', paymentSchema);
 
 // Ruta para login
 app.post('/api/login', async (req, res) => {
@@ -121,7 +86,43 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Ruta para obtener vendedores (ahora desde la base de datos)
+// Ruta para guardar un ticket
+app.post('/api/tickets', async (req, res) => {
+  try {
+    const ticket = new Ticket(req.body);
+    await ticket.save();
+    res.status(201).json(ticket);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Ruta para obtener todos los tickets
+app.get('/api/tickets', async (req, res) => {
+  try {
+    const { date, seller } = req.query;
+    let filter = {};
+    
+    if (date) {
+      // Convertir fecha YYYY-MM-DD a objeto Date
+      const startDate = new Date(date);
+      const endDate = new Date(date);
+      endDate.setDate(endDate.getDate() + 1);
+      filter.timestamp = { $gte: startDate, $lt: endDate };
+    }
+    
+    if (seller) {
+      filter.seller = seller;
+    }
+    
+    const tickets = await Ticket.find(filter).sort({ timestamp: -1 });
+    res.json(tickets);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Ruta para obtener vendedores
 app.get('/api/sellers', async (req, res) => {
   try {
     const sellers = await Seller.find();
@@ -163,6 +164,36 @@ app.post('/api/sellers', async (req, res) => {
   }
 });
 
+// Ruta para actualizar vendedor
+app.put('/api/sellers/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedSeller = await Seller.findByIdAndUpdate(id, req.body, { new: true });
+    if (updatedSeller) {
+      res.json(updatedSeller);
+    } else {
+      res.status(404).json({ error: 'Vendedor no encontrado' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Ruta para eliminar vendedor
+app.delete('/api/sellers/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedSeller = await Seller.findByIdAndDelete(id);
+    if (deletedSeller) {
+      res.json({ message: 'Vendedor eliminado exitosamente' });
+    } else {
+      res.status(404).json({ error: 'Vendedor no encontrado' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Ruta para pagos
 app.post('/api/payments', async (req, res) => {
   try {
@@ -174,7 +205,17 @@ app.post('/api/payments', async (req, res) => {
   }
 });
 
-// Ruta para reportes
+// Ruta para obtener pagos
+app.get('/api/payments', async (req, res) => {
+  try {
+    const payments = await Payment.find().sort({ createdAt: -1 });
+    res.json(payments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Ruta para reportes (básica - puedes expandirla según necesidades)
 app.get('/api/reports', async (req, res) => {
   try {
     const { type, date, seller } = req.query;
@@ -191,76 +232,55 @@ app.get('/api/reports', async (req, res) => {
       filter.seller = seller;
     }
     
-    const tickets = await Ticket.find(filter);
-    
     let reportData = {};
     
     if (type === 'sales') {
+      const tickets = await Ticket.find(filter);
       const totalSales = tickets.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = tickets.length;
       
-      // Obtener vendedores únicos
-      const sellerNames = [...new Set(tickets.map(t => t.seller))];
-      const sellersData = [];
+      // Obtener vendedores únicos y sus ventas
+      const sellerSales = {};
+      tickets.forEach(ticket => {
+        sellerSales[ticket.seller] = (sellerSales[ticket.seller] || 0) + ticket.total;
+      });
       
-      for (const sellerName of sellerNames) {
-        const sellerTickets = tickets.filter(t => t.seller === sellerName);
-        const sellerSales = sellerTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-        sellersData.push({
-          seller: sellerName,
-          name: sellerName,
-          sales: sellerSales.toLocaleString(),
-          tickets: sellerTickets.length
-        });
-      }
+      const sellers = Object.entries(sellerSales).map(([seller, sales]) => ({
+        seller,
+        sales,
+        tickets: tickets.filter(t => t.seller === seller).length
+      }));
       
       reportData = {
         title: 'REPORTE DE VENTAS',
-        period: date || new Date().toISOString().split('T')[0],
+        period: date || 'Hoy',
         totalSales: totalSales.toLocaleString(),
         ticketCount,
-        sellers: sellersData,
-        mostPlayedNumbers: []
+        sellers
       };
     } else if (type === 'payments') {
-      // Calcular pagos basados en comisiones
-      const payments = [];
-      const sellerNames = [...new Set(tickets.map(t => t.seller))];
-      
-      for (const sellerName of sellerNames) {
-        const sellerTickets = tickets.filter(t => t.seller === sellerName);
-        const sellerSales = sellerTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-        
-        // Obtener comisión del vendedor
-        const sellerDoc = await Seller.findOne({ username: sellerName });
-        const commissionRate = sellerDoc ? sellerDoc.commission : 10;
-        const commissionAmount = Math.round(sellerSales * commissionRate / 100);
-        const netAmount = sellerSales - commissionAmount;
-        
-        payments.push({
-          name: sellerDoc ? sellerDoc.name : sellerName,
-          paid: netAmount.toLocaleString(),
-          commission: commissionAmount.toLocaleString(),
-          payments: 1
-        });
-      }
-      
-      const totalPaid = payments.reduce((sum, p) => sum + parseInt(p.paid.replace(/,/g, '')), 0);
-      const totalCommission = payments.reduce((sum, p) => sum + parseInt(p.commission.replace(/,/g, '')), 0);
+      const payments = await Payment.find(filter);
+      const totalPaid = payments.reduce((sum, payment) => sum + payment.netAmount, 0);
+      const totalCommission = payments.reduce((sum, payment) => sum + payment.commissionAmount, 0);
+      const paymentCount = payments.length;
       
       reportData = {
         title: 'REPORTE DE PAGOS A VENDEDORES',
-        period: date || new Date().toISOString().split('T')[0],
+        period: date || 'Hoy',
         totalPaid: totalPaid.toLocaleString(),
         totalCommission: totalCommission.toLocaleString(),
-        paymentCount: payments.length,
-        sellers: payments
+        paymentCount,
+        sellers: payments.map(payment => ({
+          name: payment.seller,
+          paid: payment.netAmount.toLocaleString(),
+          commission: payment.commissionAmount.toLocaleString(),
+          payments: 1
+        }))
       };
     }
     
     res.json(reportData);
   } catch (error) {
-    console.error('Error en reportes:', error);
     res.status(500).json({ error: error.message });
   }
 });
