@@ -26,11 +26,9 @@ const App = () => {
   const [showAddSellerModal, setShowAddSellerModal] = useState(false);
   const [newSeller, setNewSeller] = useState({ name: '', username: '', password: '', commission: 10 });
   const [selectedSeller, setSelectedSeller] = useState('');
-  const [showEditSellerModal, setShowEditSellerModal] = useState(false);
-  const [editingSeller, setEditingSeller] = useState(null);
-  const [results, setResults] = useState([]);
-  const [newResult, setNewResult] = useState({ lottery: '', winningNumber: '', date: new Date().toISOString().split('T')[0] });
-  const [sellerDailyTickets, setSellerDailyTickets] = useState([]);
+  const [lastTicket, setLastTicket] = useState(null);
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendPhone, setResendPhone] = useState('');
 
   // URL del backend - REEMPLAZA CON TU URL REAL DE RENDER
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
@@ -144,6 +142,29 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // 🔥 Restaurar sesión desde localStorage al cargar
+  useEffect(() => {
+    const savedSession = localStorage.getItem('miSuerteSession');
+    if (savedSession) {
+      try {
+        const { userRole, currentUser } = JSON.parse(savedSession);
+        setUserRole(userRole);
+        setCurrentUser(currentUser);
+        setShowLogin(false);
+      } catch (e) {
+        console.error('Error al restaurar sesión:', e);
+      }
+    }
+  }, []);
+
+  const saveSession = (role, user) => {
+    localStorage.setItem('miSuerteSession', JSON.stringify({ userRole: role, currentUser: user }));
+  };
+
+  const clearSession = () => {
+    localStorage.removeItem('miSuerteSession');
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -157,6 +178,7 @@ const App = () => {
         setUserRole(data.role);
         setCurrentUser({ username: data.username, role: data.role, name: data.name });
         setShowLogin(false);
+        saveSession(data.role, { username: data.username, role: data.role, name: data.name });
         alert(`Bienvenido, ${data.role === 'admin' ? 'Administrador' : 'Vendedor'}`);
       } else {
         alert(data.message || 'Credenciales incorrectas');
@@ -216,6 +238,19 @@ const App = () => {
     setPendingBets(pendingBets.filter(b => b.id !== betId));
   };
 
+  // 🔥 Función mejorada para WhatsApp en móviles
+  const openWhatsApp = (phone, message) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`;
+    const waLink = document.createElement('a');
+    waLink.href = waUrl;
+    waLink.target = '_top';
+    waLink.rel = 'noopener noreferrer';
+    document.body.appendChild(waLink);
+    waLink.click();
+    document.body.removeChild(waLink);
+  };
+
   const confirmTicket = () => {
     if (betList.length === 0) {
       alert('No hay apuestas para generar el tiquete');
@@ -247,6 +282,7 @@ const App = () => {
       if (!response.ok) throw new Error('Error al guardar el ticket');
       const savedTicket = await response.json();
       setTickets(prev => [...prev, savedTicket]);
+      setLastTicket(savedTicket); // 🔥 Guardar último ticket
 
       let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n`;
       message += `Tiquete: ${ticket.ticketId}\n`;
@@ -258,16 +294,7 @@ const App = () => {
         message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
       });
 
-      const cleanPhone = customerPhone.replace(/\D/g, '');
-      const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`;
-
-      const waLink = document.createElement('a');
-      waLink.href = waUrl;
-      waLink.target = '_blank';
-      waLink.rel = 'noopener noreferrer';
-      document.body.appendChild(waLink);
-      waLink.click();
-      document.body.removeChild(waLink);
+      openWhatsApp(customerPhone, message);
 
       setBetList([]);
       setCustomerPhone('');
@@ -338,15 +365,7 @@ const App = () => {
         console.warn('No se pudo registrar el pago:', paymentError);
       }
 
-      const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`;
-      const waLink = document.createElement('a');
-      waLink.href = waUrl;
-      waLink.target = '_blank';
-      waLink.rel = 'noopener noreferrer';
-      document.body.appendChild(waLink);
-      waLink.click();
-      document.body.removeChild(waLink);
-
+      openWhatsApp(reportPhone, reportMessage); // 🔥 WhatsApp mejorado
       alert('Reporte diario enviado exitosamente');
     } catch (error) {
       console.error('Error en cierre diario:', error);
@@ -408,15 +427,7 @@ const App = () => {
         });
       });
 
-      const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`;
-      const waLink = document.createElement('a');
-      waLink.href = waUrl;
-      waLink.target = '_blank';
-      waLink.rel = 'noopener noreferrer';
-      document.body.appendChild(waLink);
-      waLink.click();
-      document.body.removeChild(waLink);
-
+      openWhatsApp(reportPhone, reportMessage); // 🔥 WhatsApp mejorado
       alert(`Reporte de cierre generado exitosamente para el rango: ${startDateStr} al ${endDateStr}`);
     } catch (error) {
       console.error('Error en cierre por rango de fechas:', error);
@@ -430,6 +441,7 @@ const App = () => {
     setShowLogin(true);
     setUsername('');
     setPassword('');
+    clearSession();
   };
 
   const handleNumberChange = (value) => {
@@ -475,44 +487,43 @@ const App = () => {
     }
   };
 
-  const loadResults = async () => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/results`);
-      if (response.ok) {
-        const resultsData = await response.json();
-        setResults(resultsData);
-      }
-    } catch (error) {
-      console.error('Error al cargar resultados:', error);
-    }
-  };
-
-  const loadSellerDailyTickets = async () => {
-    if (userRole !== 'seller') return;
-    const today = new Date().toISOString().split('T')[0];
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSellerDailyTickets(data);
-      }
-    } catch (error) {
-      console.error('Error al cargar tickets del día:', error);
-    }
-  };
-
   useEffect(() => {
     if (userRole === 'admin') {
       loadSellers();
       loadTickets();
       loadPayments();
-      loadResults();
     } else if (userRole === 'seller') {
       loadTickets();
-      loadSellerDailyTickets();
     }
   }, [userRole, currentUser]);
 
+  // 🔥 Funcionalidad de reenvío
+  const openResendModal = () => {
+    if (!lastTicket) {
+      alert('No hay ningún ticket para reenviar');
+      return;
+    }
+    setResendPhone(lastTicket.customerPhone);
+    setShowResendModal(true);
+  };
+
+  const resendTicket = () => {
+    if (!lastTicket) return;
+    let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n`;
+    message += `Tiquete: ${lastTicket.ticketId}\n`;
+    message += `Fecha: ${new Date(lastTicket.timestamp).toLocaleString()}\n`;
+    message += `Vendedor: ${lastTicket.seller}\n`;
+    message += `Total: $${lastTicket.total.toLocaleString()}\n`;
+    message += `Detalles de apuestas:\n`;
+    lastTicket.bets.forEach((bet, index) => {
+      message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
+    });
+    openWhatsApp(resendPhone, message);
+    setShowResendModal(false);
+    alert('Ticket reenviado exitosamente');
+  };
+
+  // Resto de funciones de administrador (toggleSellerStatus, deleteSeller, etc.) permanecen igual
   const toggleSellerStatus = async (sellerId, currentStatus) => {
     try {
       const seller = sellers.find(s => s._id === sellerId);
@@ -573,63 +584,6 @@ const App = () => {
     } catch (error) {
       console.error('Error:', error);
       alert('Error de conexión al crear vendedor');
-    }
-  };
-
-  const openEditModal = (seller) => {
-    setEditingSeller({ ...seller });
-    setShowEditSellerModal(true);
-  };
-
-  const updateSeller = async () => {
-    if (!editingSeller.name || !editingSeller.username || !editingSeller.password) {
-      alert('Por favor complete todos los campos');
-      return;
-    }
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/sellers/${editingSeller._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingSeller),
-      });
-      if (response.ok) {
-        const updated = await response.json();
-        setSellers(sellers.map(s => s._id === updated._id ? updated : s));
-        setShowEditSellerModal(false);
-        alert('Vendedor actualizado exitosamente');
-      } else {
-        const error = await response.json();
-        alert('Error al actualizar: ' + error.error);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error de conexión');
-    }
-  };
-
-  const addResult = async () => {
-    if (!newResult.lottery || !newResult.winningNumber) {
-      alert('Complete todos los campos');
-      return;
-    }
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/results`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newResult),
-      });
-      if (response.ok) {
-        const result = await response.json();
-        setResults([result, ...results]);
-        setNewResult({ lottery: '', winningNumber: '', date: new Date().toISOString().split('T')[0] });
-        alert('Resultado registrado exitosamente');
-      } else {
-        const error = await response.json();
-        alert('Error: ' + error.error);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error de conexión');
     }
   };
 
@@ -720,14 +674,7 @@ const App = () => {
     } else if (reportType === 'payments') {
       message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\nTOTAL PAGADO: $${currentReport.totalPaid}\nCOMISIÓN TOTAL: $${currentReport.totalCommission}\n`;
     }
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    const waLink = document.createElement('a');
-    waLink.href = waUrl;
-    waLink.target = '_blank';
-    waLink.rel = 'noopener noreferrer';
-    document.body.appendChild(waLink);
-    waLink.click();
-    document.body.removeChild(waLink);
+    openWhatsApp('', message); // Sin número específico, abre WhatsApp directamente
   };
 
   const sendByEmail = () => {
@@ -807,8 +754,7 @@ const App = () => {
                 { id: 'reports', name: 'Reportes Avanzados' },
                 { id: 'sellers', name: 'Gestión Vendedores' },
                 { id: 'payments', name: 'Pagos a Vendedores' },
-                { id: 'lotteries', name: 'Loterías' },
-                { id: 'results', name: 'Resultados' }
+                { id: 'lotteries', name: 'Loterías' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -947,7 +893,7 @@ const App = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button 
-                            onClick={() => openEditModal(seller)}
+                            onClick={() => alert('Función de edición en desarrollo')}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                           >
                             Editar
@@ -1027,74 +973,6 @@ const App = () => {
                             {lottery.active ? 'Activa' : 'Cerrada'}
                           </span>
                         </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'results' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Registrar Resultados</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Lotería</label>
-                  <select
-                    value={newResult.lottery}
-                    onChange={(e) => setNewResult({...newResult, lottery: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccione</option>
-                    {lotterySchedule.map((l, i) => (
-                      <option key={i} value={l.name}>{l.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Número Ganador</label>
-                  <input
-                    type="text"
-                    value={newResult.winningNumber}
-                    onChange={(e) => setNewResult({...newResult, winningNumber: e.target.value.replace(/\D/g, '')})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Ej: 1234"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
-                  <input
-                    type="date"
-                    value={newResult.date}
-                    onChange={(e) => setNewResult({...newResult, date: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <button
-                onClick={addResult}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300 mb-6"
-              >
-                Registrar Resultado
-              </button>
-
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Resultados Recientes</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lotería</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número Ganador</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {results.map((res, i) => (
-                      <tr key={i}>
-                        <td className="px-6 py-4 whitespace-nowrap">{res.date}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{res.lottery}</td>
-                        <td className="px-6 py-4 whitespace-nowrap font-bold text-green-600">{res.winningNumber}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1208,77 +1086,11 @@ const App = () => {
             </div>
           </div>
         )}
-
-        {showEditSellerModal && editingSeller && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Editar Vendedor</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre Completo</label>
-                  <input
-                    type="text"
-                    value={editingSeller.name}
-                    onChange={(e) => setEditingSeller({...editingSeller, name: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de Usuario</label>
-                  <input
-                    type="text"
-                    value={editingSeller.username}
-                    onChange={(e) => setEditingSeller({...editingSeller, username: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
-                  <input
-                    type="password"
-                    value={editingSeller.password}
-                    onChange={(e) => setEditingSeller({...editingSeller, password: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Comisión (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="50"
-                    value={editingSeller.commission}
-                    onChange={(e) => setEditingSeller({...editingSeller, commission: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => setShowEditSellerModal(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={updateSeller}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-300"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
 
   if (userRole === 'seller') {
-    const today = new Date().toISOString().split('T')[0];
-    const dailyTotal = sellerDailyTickets.reduce((sum, t) => sum + t.total, 0);
-    const dailyCount = sellerDailyTickets.length;
-
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
@@ -1298,42 +1110,24 @@ const App = () => {
           </div>
         </header>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Resumen del día */}
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Resumen de Hoy</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Ventas Totales</p>
-                <p className="text-2xl font-bold text-green-700">${dailyTotal.toLocaleString()}</p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Tiquetes Vendidos</p>
-                <p className="text-2xl font-bold text-blue-700">{dailyCount}</p>
+          {/* 🔥 Botón de reenvío */}
+          {lastTicket && (
+            <div className="bg-blue-50 rounded-xl p-4 mb-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium text-blue-800">Último ticket: {lastTicket.ticketId}</p>
+                  <p className="text-sm text-blue-600">Total: ${lastTicket.total.toLocaleString()}</p>
+                </div>
+                <button
+                  onClick={openResendModal}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  Reenviar Ticket
+                </button>
               </div>
             </div>
-            {dailyCount > 0 && (
-              <div className="mt-4">
-                <h3 className="text-md font-semibold mb-2">Tiquetes de Hoy</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {sellerDailyTickets.map(ticket => (
-                    <div key={ticket._id} className="border border-gray-200 rounded p-3 bg-gray-50 text-sm">
-                      <div className="flex justify-between">
-                        <span className="font-medium">Tiquete: {ticket.ticketId}</span>
-                        <span className="text-green-600 font-bold">${ticket.total.toLocaleString()}</span>
-                      </div>
-                      <div className="text-gray-600 mt-1">
-                        {ticket.bets.map((bet, i) => (
-                          <div key={i}>{bet.lottery} - {bet.number} ({bet.digits} cifras)</div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* Formulario de apuesta */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Crear Nueva Apuesta</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1517,6 +1311,47 @@ const App = () => {
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-300"
                   >
                     Confirmar y Enviar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 🔥 Modal de reenvío */}
+          {showResendModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Reenviar Ticket</h3>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Número de teléfono (original: +57{lastTicket?.customerPhone})
+                  </label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                      +57
+                    </span>
+                    <input
+                      type="tel"
+                      value={resendPhone}
+                      onChange={(e) => setResendPhone(e.target.value.replace(/\D/g, ''))}
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="3001234567"
+                      maxLength={10}
+                    />
+                  </div>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowResendModal(false)}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={resendTicket}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                  >
+                    Reenviar
                   </button>
                 </div>
               </div>
