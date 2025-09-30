@@ -28,7 +28,7 @@ const App = () => {
   const [selectedSeller, setSelectedSeller] = useState('');
   const reportRef = useRef();
 
-  // 🔴 REEMPLAZA ESTA URL CON TU URL REAL DE RENDER
+  // URL del backend - REEMPLAZA CON TU URL REAL DE RENDER
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
   // Definir todas las loterías con sus horarios
@@ -107,7 +107,7 @@ const App = () => {
     return null;
   };
 
-  // Inicializar loterías
+  // Inicializar loterías con sus horarios actuales
   useEffect(() => {
     const todayLotteries = lotterySchedule.map((lottery, index) => {
       const time = getLotteryTime(lottery);
@@ -125,7 +125,7 @@ const App = () => {
     setLotteries(todayLotteries);
   }, []);
 
-  // Simular verificación de tiempo para cerrar loterías
+  // Simular verificación de tiempo para cerrar loterías 5 minutos antes
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -291,6 +291,7 @@ const App = () => {
       const cleanPhone = customerPhone.replace(/\D/g, '');
       
       if (sendMethod) {
+        // WhatsApp para móviles
         window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
       } else {
         // SMS para móviles
@@ -304,7 +305,7 @@ const App = () => {
       
       setBetList([]);
       setCustomerPhone('');
-      alert('¡Ticket generado y guardado exitosamente!');
+      // NO cerrar sesión, mantener la aplicación abierta
     } catch (error) {
       console.error('Error:', error);
       alert('Hubo un error al guardar el ticket. Por favor intenta nuevamente.');
@@ -364,7 +365,29 @@ const App = () => {
         });
       });
       
+      try {
+        await fetch(`${BACKEND_URL}/api/payments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            seller: currentUser.username,
+            date: new Date().toLocaleDateString('es-CO'),
+            totalSales,
+            commissionRate,
+            commissionAmount,
+            netAmount,
+            ticketCount
+          }),
+        });
+      } catch (paymentError) {
+        console.warn('No se pudo registrar el pago:', paymentError);
+      }
+      
+      // WhatsApp para móviles
       window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
+      
       alert('Reporte diario enviado exitosamente');
     } catch (error) {
       console.error('Error en cierre diario:', error);
@@ -449,6 +472,7 @@ const App = () => {
         });
       });
       
+      // WhatsApp para móviles
       window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
       
       alert(`Reporte de cierre generado exitosamente para el rango: ${startDateStr} al ${endDateStr}`);
@@ -519,7 +543,7 @@ const App = () => {
     }
   }, [userRole]);
 
-  // FUNCIONES PARA VENDEDORES
+  // FUNCIONES CORREGIDAS PARA VENDEDORES
   const toggleSellerStatus = async (sellerId, currentStatus) => {
     try {
       const seller = sellers.find(s => s._id === sellerId);
@@ -600,7 +624,6 @@ const App = () => {
     }
   };
 
-  // FUNCIONES DE REPORTES
   const getMostPlayedNumbers = () => {
     const numberCount = {};
     tickets.forEach(ticket => {
@@ -709,7 +732,6 @@ const App = () => {
     window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
-  // COMPONENTES DE LOGIN Y PANEL
   if (showLogin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -799,7 +821,6 @@ const App = () => {
             </nav>
           </div>
 
-          {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -833,7 +854,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Reportes Avanzados */}
           {activeTab === 'reports' && (
             <div className="space-y-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -884,7 +904,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Gestión de Vendedores - CON CONTRASEÑA */}
           {activeTab === 'sellers' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
@@ -953,7 +972,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Pagos a Vendedores */}
           {activeTab === 'payments' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Pagos a Vendedores</h2>
@@ -1015,7 +1033,6 @@ const App = () => {
           )}
         </div>
 
-        {/* Modales */}
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -1144,7 +1161,6 @@ const App = () => {
         </header>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Sale Panel */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Crear Nueva Apuesta</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1304,18 +1320,6 @@ const App = () => {
                 Cierre por Rango de Fechas
               </button>
             </div>
-            
-            {(() => {
-              const seller = sellers.find(s => s.username === currentUser.username);
-              if (seller) {
-                return (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm font-medium text-blue-900">Tu comisión: {seller.commission}%</p>
-                  </div>
-                );
-              }
-              return null;
-            })()}
           </div>
 
           {showConfirmModal && (
