@@ -26,12 +26,15 @@ const App = () => {
   const [showAddSellerModal, setShowAddSellerModal] = useState(false);
   const [newSeller, setNewSeller] = useState({ name: '', username: '', password: '', commission: 10 });
   const [selectedSeller, setSelectedSeller] = useState('');
-  const reportRef = useRef();
+  const [showEditSellerModal, setShowEditSellerModal] = useState(false);
+  const [editingSeller, setEditingSeller] = useState(null);
+  const [results, setResults] = useState([]);
+  const [newResult, setNewResult] = useState({ lottery: '', winningNumber: '', date: new Date().toISOString().split('T')[0] });
+  const [sellerDailyTickets, setSellerDailyTickets] = useState([]);
 
   // URL del backend - REEMPLAZA CON TU URL REAL DE RENDER
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
-  // Definir todas las loterías con sus horarios
   const lotterySchedule = [
     { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00' },
     { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
@@ -77,7 +80,6 @@ const App = () => {
     { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00', holidayTime: null }
   ];
 
-  // Función para determinar si hoy es festivo (simulado)
   const isHoliday = () => {
     const holidays = [
       '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25'
@@ -89,12 +91,10 @@ const App = () => {
     return holidays.includes(todayStr);
   };
 
-  // Función para obtener el horario correcto según el día y si es festivo
   const getLotteryTime = (lottery) => {
     const today = new Date();
     const dayOfWeek = today.getDay();
     const holiday = isHoliday();
-    
     if (holiday && lottery.holidayTime) {
       return lottery.holidayTime;
     } else if (dayOfWeek === 6 && lottery.saturdayTime) {
@@ -107,7 +107,6 @@ const App = () => {
     return null;
   };
 
-  // Inicializar loterías con sus horarios actuales
   useEffect(() => {
     const todayLotteries = lotterySchedule.map((lottery, index) => {
       const time = getLotteryTime(lottery);
@@ -121,53 +120,42 @@ const App = () => {
       }
       return null;
     }).filter(lottery => lottery !== null);
-    
     setLotteries(todayLotteries);
   }, []);
 
-  // Simular verificación de tiempo para cerrar loterías 5 minutos antes
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
       const currentHour = now.getHours().toString().padStart(2, '0');
       const currentMinute = now.getMinutes().toString().padStart(2, '0');
       const currentTime = `${currentHour}:${currentMinute}`;
-      
       setLotteries(prev => prev.map(lottery => {
         const [hour, minute] = lottery.time.split(':');
         const lotteryTime = new Date();
         lotteryTime.setHours(parseInt(hour), parseInt(minute), 0);
-        
         const fiveMinutesBefore = new Date(lotteryTime.getTime() - 5 * 60000);
         const nowTime = new Date();
-        
         return {
           ...lottery,
           active: nowTime < fiveMinutesBefore
         };
       }));
     }, 60000);
-
     return () => clearInterval(interval);
   }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
     try {
       const response = await fetch(`${BACKEND_URL}/api/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         setUserRole(data.role);
-        setCurrentUser({ username: data.username, role: data.role });
+        setCurrentUser({ username: data.username, role: data.role, name: data.name });
         setShowLogin(false);
         alert(`Bienvenido, ${data.role === 'admin' ? 'Administrador' : 'Vendedor'}`);
       } else {
@@ -184,20 +172,16 @@ const App = () => {
       alert('Por favor complete todos los campos');
       return;
     }
-    
     const digits = parseInt(currentBet.digits);
     if (currentBet.number.length !== digits) {
       alert(`El número debe tener exactamente ${digits} dígitos`);
       return;
     }
-    
     const amount = parseInt(currentBet.amount);
-    
     if (digits === 4 && amount > 5000) {
       alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
       return;
     }
-    
     if (amount > 20000) {
       const newPendingBet = {
         id: Date.now(),
@@ -211,7 +195,6 @@ const App = () => {
     } else {
       setBetList([...betList, { ...currentBet, id: Date.now() }]);
     }
-    
     setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
   };
 
@@ -238,18 +221,15 @@ const App = () => {
       alert('No hay apuestas para generar el tiquete');
       return;
     }
-    
     if (!customerPhone) {
       alert('Por favor ingrese el número del cliente');
       return;
     }
-    
     setShowConfirmModal(true);
   };
 
   const generateTicket = async () => {
     setShowConfirmModal(false);
-    
     const ticket = {
       ticketId: `TKT${Date.now()}`,
       seller: currentUser.username,
@@ -258,54 +238,39 @@ const App = () => {
       customerPhone,
       timestamp: new Date()
     };
-    
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ticket),
       });
-      
-      if (!response.ok) {
-        throw new Error('Error al guardar el ticket');
-      }
-      
+      if (!response.ok) throw new Error('Error al guardar el ticket');
       const savedTicket = await response.json();
       setTickets(prev => [...prev, savedTicket]);
-      
-      const sendMethod = window.confirm('¿Enviar ticket por WhatsApp (Aceptar) o por SMS (Cancelar)?');
-      
-      let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n\n`;
+
+      let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n`;
       message += `Tiquete: ${ticket.ticketId}\n`;
       message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
       message += `Vendedor: ${ticket.seller}\n`;
-      message += `Total: $${ticket.total.toLocaleString()}\n\n`;
+      message += `Total: $${ticket.total.toLocaleString()}\n`;
       message += `Detalles de apuestas:\n`;
-      
       ticket.bets.forEach((bet, index) => {
         message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
       });
-      
+
       const cleanPhone = customerPhone.replace(/\D/g, '');
-      
-      if (sendMethod) {
-        // WhatsApp para móviles
-        window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
-      } else {
-        // SMS para móviles
-        const smsLink = document.createElement('a');
-        smsLink.href = `sms:${cleanPhone}?body=${encodeURIComponent(message)}`;
-        smsLink.style.display = 'none';
-        document.body.appendChild(smsLink);
-        smsLink.click();
-        document.body.removeChild(smsLink);
-      }
-      
+      const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`;
+
+      const waLink = document.createElement('a');
+      waLink.href = waUrl;
+      waLink.target = '_blank';
+      waLink.rel = 'noopener noreferrer';
+      document.body.appendChild(waLink);
+      waLink.click();
+      document.body.removeChild(waLink);
+
       setBetList([]);
       setCustomerPhone('');
-      // NO cerrar sesión, mantener la aplicación abierta
     } catch (error) {
       console.error('Error:', error);
       alert('Hubo un error al guardar el ticket. Por favor intenta nuevamente.');
@@ -314,49 +279,39 @@ const App = () => {
 
   const dailyClose = async () => {
     const today = new Date().toISOString().split('T')[0];
-    
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
-      
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
-      }
-      
+      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
       const todayTickets = await response.json();
       const totalSales = todayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = todayTickets.length;
-      
       if (ticketCount === 0) {
         alert('No hay ventas para el día de hoy');
         return;
       }
-      
       const seller = sellers.find(s => s.username === currentUser.username);
       const commissionRate = seller ? seller.commission : 10;
       const commissionAmount = Math.round(totalSales * commissionRate / 100);
       const netAmount = totalSales - commissionAmount;
-      
       const reportPhone = prompt('Ingrese el número de teléfono para enviar el reporte (solo dígitos):', '');
       if (!reportPhone || reportPhone.trim() === '') {
         alert('Operación cancelada');
         return;
       }
-      
       const cleanPhone = reportPhone.replace(/\D/g, '');
       if (cleanPhone.length < 10) {
         alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos)');
         return;
       }
-      
-      let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊\n\n`;
+
+      let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊\n`;
       reportMessage += `Fecha: ${new Date().toLocaleDateString('es-CO')}\n`;
       reportMessage += `Vendedor: ${currentUser.username}\n`;
       reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
       reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
       reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}\n`;
-      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n\n`;
+      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n`;
       reportMessage += `Detalles de Ventas:\n`;
-      
       todayTickets.forEach((ticket, index) => {
         reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
         reportMessage += `Total: $${ticket.total.toLocaleString()}\n`;
@@ -364,13 +319,11 @@ const App = () => {
           reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
         });
       });
-      
+
       try {
         await fetch(`${BACKEND_URL}/api/payments`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             seller: currentUser.username,
             date: new Date().toLocaleDateString('es-CO'),
@@ -384,10 +337,16 @@ const App = () => {
       } catch (paymentError) {
         console.warn('No se pudo registrar el pago:', paymentError);
       }
-      
-      // WhatsApp para móviles
-      window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
-      
+
+      const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`;
+      const waLink = document.createElement('a');
+      waLink.href = waUrl;
+      waLink.target = '_blank';
+      waLink.rel = 'noopener noreferrer';
+      document.body.appendChild(waLink);
+      waLink.click();
+      document.body.removeChild(waLink);
+
       alert('Reporte diario enviado exitosamente');
     } catch (error) {
       console.error('Error en cierre diario:', error);
@@ -397,72 +356,49 @@ const App = () => {
 
   const generateDateRangeReport = async () => {
     const startDateStr = prompt('Ingrese la fecha de inicio (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!startDateStr) {
-      alert('Operación cancelada');
-      return;
-    }
-    
+    if (!startDateStr) return;
     const endDateStr = prompt('Ingrese la fecha de fin (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!endDateStr) {
-      alert('Operación cancelada');
-      return;
-    }
-    
+    if (!endDateStr) return;
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-    
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       alert('Formato de fecha inválido. Use YYYY-MM-DD');
       return;
     }
-    
     if (startDate > endDate) {
       alert('La fecha de inicio no puede ser mayor que la fecha de fin');
       return;
     }
-    
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets?startDate=${startDateStr}&endDate=${endDateStr}&seller=${currentUser.username}`);
-      
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
-      }
-      
+      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
       const ticketsInRange = await response.json();
       const totalSales = ticketsInRange.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = ticketsInRange.length;
-      
       if (ticketCount === 0) {
         alert(`No hay ventas en el rango de fechas: ${startDateStr} al ${endDateStr}`);
         return;
       }
-      
       const seller = sellers.find(s => s.username === currentUser.username);
       const commissionRate = seller ? seller.commission : 10;
       const commissionAmount = Math.round(totalSales * commissionRate / 100);
       const netAmount = totalSales - commissionAmount;
-      
       const reportPhone = prompt('Ingrese el número de teléfono para enviar el reporte (solo dígitos):', '');
-      if (!reportPhone || reportPhone.trim() === '') {
-        alert('Operación cancelada');
-        return;
-      }
-      
+      if (!reportPhone || reportPhone.trim() === '') return;
       const cleanPhone = reportPhone.replace(/\D/g, '');
       if (cleanPhone.length < 10) {
         alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos)');
         return;
       }
-      
-      let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊\n\n`;
+
+      let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊\n`;
       reportMessage += `Rango de Fechas: ${new Date(startDateStr).toLocaleDateString('es-CO')} al ${new Date(endDateStr).toLocaleDateString('es-CO')}\n`;
       reportMessage += `Vendedor: ${currentUser.username}\n`;
       reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
       reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
       reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}\n`;
-      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n\n`;
+      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n`;
       reportMessage += `Detalles de Ventas:\n`;
-      
       ticketsInRange.forEach((ticket, index) => {
         reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
         reportMessage += `Fecha: ${new Date(ticket.timestamp).toLocaleDateString('es-CO')}\n`;
@@ -471,10 +407,16 @@ const App = () => {
           reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
         });
       });
-      
-      // WhatsApp para móviles
-      window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
-      
+
+      const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`;
+      const waLink = document.createElement('a');
+      waLink.href = waUrl;
+      waLink.target = '_blank';
+      waLink.rel = 'noopener noreferrer';
+      document.body.appendChild(waLink);
+      waLink.click();
+      document.body.removeChild(waLink);
+
       alert(`Reporte de cierre generado exitosamente para el rango: ${startDateStr} al ${endDateStr}`);
     } catch (error) {
       console.error('Error en cierre por rango de fechas:', error);
@@ -533,36 +475,56 @@ const App = () => {
     }
   };
 
+  const loadResults = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/results`);
+      if (response.ok) {
+        const resultsData = await response.json();
+        setResults(resultsData);
+      }
+    } catch (error) {
+      console.error('Error al cargar resultados:', error);
+    }
+  };
+
+  const loadSellerDailyTickets = async () => {
+    if (userRole !== 'seller') return;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSellerDailyTickets(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar tickets del día:', error);
+    }
+  };
+
   useEffect(() => {
     if (userRole === 'admin') {
       loadSellers();
       loadTickets();
       loadPayments();
+      loadResults();
     } else if (userRole === 'seller') {
       loadTickets();
+      loadSellerDailyTickets();
     }
-  }, [userRole]);
+  }, [userRole, currentUser]);
 
-  // FUNCIONES CORREGIDAS PARA VENDEDORES
   const toggleSellerStatus = async (sellerId, currentStatus) => {
     try {
       const seller = sellers.find(s => s._id === sellerId);
       if (!seller) return;
-      
       const updatedSeller = { ...seller, active: !currentStatus };
-      
       const response = await fetch(`${BACKEND_URL}/api/sellers/${sellerId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedSeller),
       });
-      
       if (response.ok) {
-        setSellers(sellers.map(s => 
-          s._id === sellerId ? { ...s, active: !currentStatus } : s
-        ));
+        setSellers(sellers.map(s => s._id === sellerId ? { ...s, active: !currentStatus } : s));
         alert(`Vendedor ${!currentStatus ? 'activado' : 'desactivado'} exitosamente`);
       }
     } catch (error) {
@@ -572,15 +534,9 @@ const App = () => {
   };
 
   const deleteSeller = async (sellerId) => {
-    if (!window.confirm('¿Está seguro que desea eliminar este vendedor?')) {
-      return;
-    }
-    
+    if (!window.confirm('¿Está seguro que desea eliminar este vendedor?')) return;
     try {
-      const response = await fetch(`${BACKEND_URL}/api/sellers/${sellerId}`, {
-        method: 'DELETE',
-      });
-      
+      const response = await fetch(`${BACKEND_URL}/api/sellers/${sellerId}`, { method: 'DELETE' });
       if (response.ok) {
         setSellers(sellers.filter(s => s._id !== sellerId));
         alert('Vendedor eliminado exitosamente');
@@ -598,16 +554,12 @@ const App = () => {
       alert('Por favor complete todos los campos');
       return;
     }
-    
     try {
       const response = await fetch(`${BACKEND_URL}/api/sellers`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSeller),
       });
-      
       if (response.ok) {
         const savedSeller = await response.json();
         setSellers([...sellers, savedSeller]);
@@ -621,6 +573,63 @@ const App = () => {
     } catch (error) {
       console.error('Error:', error);
       alert('Error de conexión al crear vendedor');
+    }
+  };
+
+  const openEditModal = (seller) => {
+    setEditingSeller({ ...seller });
+    setShowEditSellerModal(true);
+  };
+
+  const updateSeller = async () => {
+    if (!editingSeller.name || !editingSeller.username || !editingSeller.password) {
+      alert('Por favor complete todos los campos');
+      return;
+    }
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/sellers/${editingSeller._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingSeller),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setSellers(sellers.map(s => s._id === updated._id ? updated : s));
+        setShowEditSellerModal(false);
+        alert('Vendedor actualizado exitosamente');
+      } else {
+        const error = await response.json();
+        alert('Error al actualizar: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión');
+    }
+  };
+
+  const addResult = async () => {
+    if (!newResult.lottery || !newResult.winningNumber) {
+      alert('Complete todos los campos');
+      return;
+    }
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newResult),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setResults([result, ...results]);
+        setNewResult({ lottery: '', winningNumber: '', date: new Date().toISOString().split('T')[0] });
+        alert('Resultado registrado exitosamente');
+      } else {
+        const error = await response.json();
+        alert('Error: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión');
     }
   };
 
@@ -678,18 +687,11 @@ const App = () => {
       alert('Seleccione un tipo de reporte');
       return;
     }
-    
     try {
       let url = `${BACKEND_URL}/api/reports?type=${type}&date=${date}`;
-      if (selectedSeller) {
-        url += `&seller=${selectedSeller}`;
-      }
-      
+      if (selectedSeller) url += `&seller=${selectedSeller}`;
       const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Error al generar el reporte');
-      }
-      
+      if (!response.ok) throw new Error('Error al generar el reporte');
       const reportData = await response.json();
       setCurrentReport(reportData);
       setReportType(type);
@@ -712,23 +714,26 @@ const App = () => {
 
   const sendByWhatsApp = () => {
     if (!currentReport) return;
-    
     let message = '';
     if (reportType === 'sales') {
-      message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\n\nVENTAS TOTALES: $${currentReport.totalSales}\nTIQUETES: ${currentReport.ticketCount}\n`;
+      message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\nVENTAS TOTALES: $${currentReport.totalSales}\nTIQUETES: ${currentReport.ticketCount}\n`;
     } else if (reportType === 'payments') {
-      message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\n\nTOTAL PAGADO: $${currentReport.totalPaid}\nCOMISIÓN TOTAL: $${currentReport.totalCommission}\n`;
+      message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\nTOTAL PAGADO: $${currentReport.totalPaid}\nCOMISIÓN TOTAL: $${currentReport.totalCommission}\n`;
     }
-    
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const waLink = document.createElement('a');
+    waLink.href = waUrl;
+    waLink.target = '_blank';
+    waLink.rel = 'noopener noreferrer';
+    document.body.appendChild(waLink);
+    waLink.click();
+    document.body.removeChild(waLink);
   };
 
   const sendByEmail = () => {
     if (!currentReport || !emailToSend) return;
-    
     let subject = `Reporte ${reportType === 'sales' ? 'de Ventas' : 'de Pagos'} - Mi Suerte Online`;
     let body = JSON.stringify(currentReport, null, 2);
-    
     window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
@@ -740,7 +745,6 @@ const App = () => {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Mi Suerte Online</h1>
             <p className="text-gray-600">Sistema de Gestión de Tickets</p>
           </div>
-          
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Usuario</label>
@@ -795,7 +799,6 @@ const App = () => {
             </div>
           </div>
         </header>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="border-b border-gray-200 mb-8">
             <nav className="flex space-x-8">
@@ -804,7 +807,8 @@ const App = () => {
                 { id: 'reports', name: 'Reportes Avanzados' },
                 { id: 'sellers', name: 'Gestión Vendedores' },
                 { id: 'payments', name: 'Pagos a Vendedores' },
-                { id: 'lotteries', name: 'Loterías' }
+                { id: 'lotteries', name: 'Loterías' },
+                { id: 'results', name: 'Resultados' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -915,7 +919,6 @@ const App = () => {
                   + Añadir Nuevo Vendedor
                 </button>
               </div>
-              
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -944,7 +947,7 @@ const App = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button 
-                            onClick={() => alert('Función de edición en desarrollo')}
+                            onClick={() => openEditModal(seller)}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                           >
                             Editar
@@ -1031,8 +1034,77 @@ const App = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'results' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Registrar Resultados</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Lotería</label>
+                  <select
+                    value={newResult.lottery}
+                    onChange={(e) => setNewResult({...newResult, lottery: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione</option>
+                    {lotterySchedule.map((l, i) => (
+                      <option key={i} value={l.name}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Número Ganador</label>
+                  <input
+                    type="text"
+                    value={newResult.winningNumber}
+                    onChange={(e) => setNewResult({...newResult, winningNumber: e.target.value.replace(/\D/g, '')})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ej: 1234"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                  <input
+                    type="date"
+                    value={newResult.date}
+                    onChange={(e) => setNewResult({...newResult, date: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={addResult}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300 mb-6"
+              >
+                Registrar Resultado
+              </button>
+
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Resultados Recientes</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lotería</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número Ganador</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {results.map((res, i) => (
+                      <tr key={i}>
+                        <td className="px-6 py-4 whitespace-nowrap">{res.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{res.lottery}</td>
+                        <td className="px-6 py-4 whitespace-nowrap font-bold text-green-600">{res.winningNumber}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Modales */}
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -1136,19 +1208,85 @@ const App = () => {
             </div>
           </div>
         )}
+
+        {showEditSellerModal && editingSeller && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Editar Vendedor</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre Completo</label>
+                  <input
+                    type="text"
+                    value={editingSeller.name}
+                    onChange={(e) => setEditingSeller({...editingSeller, name: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de Usuario</label>
+                  <input
+                    type="text"
+                    value={editingSeller.username}
+                    onChange={(e) => setEditingSeller({...editingSeller, username: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                  <input
+                    type="password"
+                    value={editingSeller.password}
+                    onChange={(e) => setEditingSeller({...editingSeller, password: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Comisión (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={editingSeller.commission}
+                    onChange={(e) => setEditingSeller({...editingSeller, commission: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => setShowEditSellerModal(false)}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={updateSeller}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   if (userRole === 'seller') {
+    const today = new Date().toISOString().split('T')[0];
+    const dailyTotal = sellerDailyTickets.reduce((sum, t) => sum + t.total, 0);
+    const dailyCount = sellerDailyTickets.length;
+
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel de Venta</h1>
               <div className="flex items-center space-x-4">
-                <span className="text-gray-600">Vendedor: {currentUser.username}</span>
+                <span className="text-gray-600">Vendedor: {currentUser.name || currentUser.username}</span>
                 <button
                   onClick={logout}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-300"
@@ -1159,9 +1297,44 @@ const App = () => {
             </div>
           </div>
         </header>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Resumen del día */}
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Resumen de Hoy</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Ventas Totales</p>
+                <p className="text-2xl font-bold text-green-700">${dailyTotal.toLocaleString()}</p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Tiquetes Vendidos</p>
+                <p className="text-2xl font-bold text-blue-700">{dailyCount}</p>
+              </div>
+            </div>
+            {dailyCount > 0 && (
+              <div className="mt-4">
+                <h3 className="text-md font-semibold mb-2">Tiquetes de Hoy</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {sellerDailyTickets.map(ticket => (
+                    <div key={ticket._id} className="border border-gray-200 rounded p-3 bg-gray-50 text-sm">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Tiquete: {ticket.ticketId}</span>
+                        <span className="text-green-600 font-bold">${ticket.total.toLocaleString()}</span>
+                      </div>
+                      <div className="text-gray-600 mt-1">
+                        {ticket.bets.map((bet, i) => (
+                          <div key={i}>{bet.lottery} - {bet.number} ({bet.digits} cifras)</div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          {/* Formulario de apuesta */}
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Crear Nueva Apuesta</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -1240,7 +1413,7 @@ const App = () => {
           </div>
 
           {betList.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
               <div className="space-y-3">
                 {betList.map(bet => (
@@ -1276,7 +1449,7 @@ const App = () => {
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Número del Cliente (solo dígitos)</label>
