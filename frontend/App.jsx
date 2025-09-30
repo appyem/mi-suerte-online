@@ -13,11 +13,12 @@ const App = () => {
   const [currentBet, setCurrentBet] = useState({ lottery: '', digits: '2', number: '', amount: '' });
   const [betList, setBetList] = useState([]);
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState(''); // 🔥 Solo frontend
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('create'); // 🔥 Por defecto: crear apuesta
   const [payments, setPayments] = useState([]);
   const [showReportModal, setShowReportModal] = useState(false);
   const [currentReport, setCurrentReport] = useState(null);
@@ -26,9 +27,13 @@ const App = () => {
   const [showAddSellerModal, setShowAddSellerModal] = useState(false);
   const [newSeller, setNewSeller] = useState({ name: '', username: '', password: '', commission: 10 });
   const [selectedSeller, setSelectedSeller] = useState('');
-  const [lastTicket, setLastTicket] = useState(null);
   const [showResendModal, setShowResendModal] = useState(false);
-  const [resendPhone, setResendPhone] = useState('');
+  const [resendTicketData, setResendTicketData] = useState(null);
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [dateRange, setDateRange] = useState({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] });
+  const [betMode, setBetMode] = useState('single'); // 🔥 'single' o 'multiple'
+  const [multiLotteries, setMultiLotteries] = useState([]);
+  const [todayTickets, setTodayTickets] = useState([]);
 
   // URL del backend - REEMPLAZA CON TU URL REAL DE RENDER
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
@@ -142,12 +147,12 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // 🔥 Restaurar sesión desde localStorage al cargar
+  // 🔥 Persistencia de sesión
   useEffect(() => {
-    const savedSession = localStorage.getItem('miSuerteSession');
-    if (savedSession) {
+    const saved = localStorage.getItem('miSuerteSession');
+    if (saved) {
       try {
-        const { userRole, currentUser } = JSON.parse(savedSession);
+        const { userRole, currentUser } = JSON.parse(saved);
         setUserRole(userRole);
         setCurrentUser(currentUser);
         setShowLogin(false);
@@ -190,34 +195,81 @@ const App = () => {
   };
 
   const handleAddBet = () => {
-    if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
-      alert('Por favor complete todos los campos');
-      return;
-    }
-    const digits = parseInt(currentBet.digits);
-    if (currentBet.number.length !== digits) {
-      alert(`El número debe tener exactamente ${digits} dígitos`);
-      return;
-    }
-    const amount = parseInt(currentBet.amount);
-    if (digits === 4 && amount > 5000) {
-      alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
-      return;
-    }
-    if (amount > 20000) {
-      const newPendingBet = {
-        id: Date.now(),
-        seller: currentUser.username,
-        ...currentBet,
-        status: 'pending',
-        timestamp: new Date().toLocaleString()
-      };
-      setPendingBets([...pendingBets, newPendingBet]);
-      alert('Apuesta pendiente de aprobación del administrador');
+    if (betMode === 'single') {
+      if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
+        alert('Complete todos los campos');
+        return;
+      }
+      const digits = parseInt(currentBet.digits);
+      if (currentBet.number.length !== digits) {
+        alert(`El número debe tener exactamente ${digits} dígitos`);
+        return;
+      }
+      const amount = parseInt(currentBet.amount);
+      if (digits === 4 && amount > 5000) {
+        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
+        return;
+      }
+      if (amount > 20000) {
+        const newPendingBet = {
+          id: Date.now(),
+          seller: currentUser.username,
+          ...currentBet,
+          status: 'pending',
+          timestamp: new Date().toLocaleString()
+        };
+        setPendingBets([...pendingBets, newPendingBet]);
+        alert('Apuesta pendiente de aprobación del administrador');
+      } else {
+        setBetList([...betList, { ...currentBet, id: Date.now() }]);
+      }
+      setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
     } else {
-      setBetList([...betList, { ...currentBet, id: Date.now() }]);
+      // Modo múltiple
+      if (multiLotteries.length === 0) {
+        alert('Seleccione al menos una lotería');
+        return;
+      }
+      const { digits, number, amount } = currentBet;
+      if (!number || !amount) {
+        alert('Complete el número y el monto');
+        return;
+      }
+      const numDigits = parseInt(digits);
+      if (number.length !== numDigits) {
+        alert(`El número debe tener exactamente ${numDigits} dígitos`);
+        return;
+      }
+      const betAmount = parseInt(amount);
+      if (numDigits === 4 && betAmount > 5000) {
+        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
+        return;
+      }
+
+      const newBets = multiLotteries.map(lotteryName => ({
+        lottery: lotteryName,
+        digits,
+        number,
+        amount,
+        id: Date.now() + Math.random()
+      }));
+
+      if (betAmount > 20000) {
+        const pendingBets = newBets.map(bet => ({
+          ...bet,
+          seller: currentUser.username,
+          status: 'pending',
+          timestamp: new Date().toLocaleString()
+        }));
+        setPendingBets([...pendingBets, ...pendingBets]);
+        alert('Apuestas pendientes de aprobación del administrador');
+      } else {
+        setBetList([...betList, ...newBets]);
+      }
+
+      setMultiLotteries([]);
+      setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
     }
-    setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
   };
 
   const handleRemoveBet = (betId) => {
@@ -238,7 +290,6 @@ const App = () => {
     setPendingBets(pendingBets.filter(b => b.id !== betId));
   };
 
-  // 🔥 Función mejorada para WhatsApp en móviles
   const openWhatsApp = (phone, message) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -273,18 +324,27 @@ const App = () => {
       customerPhone,
       timestamp: new Date()
     };
+
+    // Guardar en memoria con nombre
+    const ticketWithCustomer = { ...ticket, customerName };
+    setTodayTickets(prev => [...prev, ticketWithCustomer]);
+
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ticket),
+        body: JSON.stringify({
+          ticketId: ticket.ticketId,
+          seller: ticket.seller,
+          bets: ticket.bets,
+          total: ticket.total,
+          customerPhone: ticket.customerPhone,
+          timestamp: ticket.timestamp
+        }),
       });
       if (!response.ok) throw new Error('Error al guardar el ticket');
-      const savedTicket = await response.json();
-      setTickets(prev => [...prev, savedTicket]);
-      setLastTicket(savedTicket); // 🔥 Guardar último ticket
 
-      let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n`;
+      let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀\n`;
       message += `Tiquete: ${ticket.ticketId}\n`;
       message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
       message += `Vendedor: ${ticket.seller}\n`;
@@ -298,6 +358,7 @@ const App = () => {
 
       setBetList([]);
       setCustomerPhone('');
+      setCustomerName('');
     } catch (error) {
       console.error('Error:', error);
       alert('Hubo un error al guardar el ticket. Por favor intenta nuevamente.');
@@ -365,7 +426,7 @@ const App = () => {
         console.warn('No se pudo registrar el pago:', paymentError);
       }
 
-      openWhatsApp(reportPhone, reportMessage); // 🔥 WhatsApp mejorado
+      openWhatsApp(reportPhone, reportMessage);
       alert('Reporte diario enviado exitosamente');
     } catch (error) {
       console.error('Error en cierre diario:', error);
@@ -373,29 +434,32 @@ const App = () => {
     }
   };
 
+  const openDateRangeModal = () => {
+    const today = new Date().toISOString().split('T')[0];
+    setDateRange({ start: today, end: today });
+    setShowDateRangeModal(true);
+  };
+
   const generateDateRangeReport = async () => {
-    const startDateStr = prompt('Ingrese la fecha de inicio (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!startDateStr) return;
-    const endDateStr = prompt('Ingrese la fecha de fin (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!endDateStr) return;
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      alert('Formato de fecha inválido. Use YYYY-MM-DD');
+    const { start, end } = dateRange;
+    if (!start || !end) {
+      alert('Seleccione ambas fechas');
       return;
     }
+    const startDate = new Date(start);
+    const endDate = new Date(end);
     if (startDate > endDate) {
       alert('La fecha de inicio no puede ser mayor que la fecha de fin');
       return;
     }
     try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets?startDate=${startDateStr}&endDate=${endDateStr}&seller=${currentUser.username}`);
+      const response = await fetch(`${BACKEND_URL}/api/tickets?startDate=${start}&endDate=${end}&seller=${currentUser.username}`);
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
       const ticketsInRange = await response.json();
       const totalSales = ticketsInRange.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = ticketsInRange.length;
       if (ticketCount === 0) {
-        alert(`No hay ventas en el rango de fechas: ${startDateStr} al ${endDateStr}`);
+        alert(`No hay ventas en el rango de fechas: ${start} al ${end}`);
         return;
       }
       const seller = sellers.find(s => s.username === currentUser.username);
@@ -411,7 +475,7 @@ const App = () => {
       }
 
       let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊\n`;
-      reportMessage += `Rango de Fechas: ${new Date(startDateStr).toLocaleDateString('es-CO')} al ${new Date(endDateStr).toLocaleDateString('es-CO')}\n`;
+      reportMessage += `Rango de Fechas: ${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}\n`;
       reportMessage += `Vendedor: ${currentUser.username}\n`;
       reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
       reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
@@ -427,8 +491,9 @@ const App = () => {
         });
       });
 
-      openWhatsApp(reportPhone, reportMessage); // 🔥 WhatsApp mejorado
-      alert(`Reporte de cierre generado exitosamente para el rango: ${startDateStr} al ${endDateStr}`);
+      openWhatsApp(reportPhone, reportMessage);
+      alert(`Reporte de cierre generado exitosamente para el rango: ${start} al ${end}`);
+      setShowDateRangeModal(false);
     } catch (error) {
       console.error('Error en cierre por rango de fechas:', error);
       alert(`Error al generar el reporte: ${error.message || 'Verifique la conexión'}`);
@@ -469,6 +534,11 @@ const App = () => {
       if (response.ok) {
         const ticketsData = await response.json();
         setTickets(ticketsData);
+        const today = new Date().toISOString().split('T')[0];
+        const todayTicketsFromDB = ticketsData
+          .filter(t => new Date(t.timestamp).toISOString().split('T')[0] === today)
+          .map(t => ({ ...t, customerName: '' }));
+        setTodayTickets(todayTicketsFromDB);
       }
     } catch (error) {
       console.error('Error al cargar tickets:', error);
@@ -495,35 +565,35 @@ const App = () => {
     } else if (userRole === 'seller') {
       loadTickets();
     }
-  }, [userRole, currentUser]);
+  }, [userRole]);
 
-  // 🔥 Funcionalidad de reenvío
-  const openResendModal = () => {
-    if (!lastTicket) {
-      alert('No hay ningún ticket para reenviar');
-      return;
-    }
-    setResendPhone(lastTicket.customerPhone);
+  const openResendModal = (ticket) => {
+    setResendTicketData({
+      ...ticket,
+      originalPhone: ticket.customerPhone,
+      originalName: ticket.customerName || ''
+    });
     setShowResendModal(true);
   };
 
   const resendTicket = () => {
-    if (!lastTicket) return;
-    let message = `¡Gracias por jugar con Mi Suerte Online! 🍀\n`;
-    message += `Tiquete: ${lastTicket.ticketId}\n`;
-    message += `Fecha: ${new Date(lastTicket.timestamp).toLocaleString()}\n`;
-    message += `Vendedor: ${lastTicket.seller}\n`;
-    message += `Total: $${lastTicket.total.toLocaleString()}\n`;
+    if (!resendTicketData) return;
+    const { customerName: name, customerPhone: phone, bets, total, ticketId, seller, timestamp } = resendTicketData;
+    let message = `¡Gracias por jugar con Mi Suerte Online${name ? `, ${name}` : ''}! 🍀\n`;
+    message += `Tiquete: ${ticketId}\n`;
+    message += `Fecha: ${new Date(timestamp).toLocaleString()}\n`;
+    message += `Vendedor: ${seller}\n`;
+    message += `Total: $${total.toLocaleString()}\n`;
     message += `Detalles de apuestas:\n`;
-    lastTicket.bets.forEach((bet, index) => {
+    bets.forEach((bet, index) => {
       message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
     });
-    openWhatsApp(resendPhone, message);
+    openWhatsApp(phone, message);
     setShowResendModal(false);
     alert('Ticket reenviado exitosamente');
   };
 
-  // Resto de funciones de administrador (toggleSellerStatus, deleteSeller, etc.) permanecen igual
+  // Resto de funciones de admin (sin cambios)
   const toggleSellerStatus = async (sellerId, currentStatus) => {
     try {
       const seller = sellers.find(s => s._id === sellerId);
@@ -674,7 +744,14 @@ const App = () => {
     } else if (reportType === 'payments') {
       message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\nTOTAL PAGADO: $${currentReport.totalPaid}\nCOMISIÓN TOTAL: $${currentReport.totalCommission}\n`;
     }
-    openWhatsApp('', message); // Sin número específico, abre WhatsApp directamente
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const waLink = document.createElement('a');
+    waLink.href = waUrl;
+    waLink.target = '_top';
+    waLink.rel = 'noopener noreferrer';
+    document.body.appendChild(waLink);
+    waLink.click();
+    document.body.removeChild(waLink);
   };
 
   const sendByEmail = () => {
@@ -982,7 +1059,6 @@ const App = () => {
           )}
         </div>
 
-        {/* Modales */}
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -1091,6 +1167,8 @@ const App = () => {
   }
 
   if (userRole === 'seller') {
+    const today = new Date().toISOString().split('T')[0];
+
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
@@ -1110,104 +1188,285 @@ const App = () => {
           </div>
         </header>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* 🔥 Botón de reenvío */}
-          {lastTicket && (
-            <div className="bg-blue-50 rounded-xl p-4 mb-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-blue-800">Último ticket: {lastTicket.ticketId}</p>
-                  <p className="text-sm text-blue-600">Total: ${lastTicket.total.toLocaleString()}</p>
-                </div>
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="flex space-x-6">
+              <button
+                onClick={() => setActiveTab('create')}
+                className={`py-2 px-1 font-medium text-sm ${
+                  activeTab === 'create'
+                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Crear Apuesta
+              </button>
+              <button
+                onClick={() => setActiveTab('sales')}
+                className={`py-2 px-1 font-medium text-sm ${
+                  activeTab === 'sales'
+                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Ventas del Día ({todayTickets.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('close')}
+                className={`py-2 px-1 font-medium text-sm ${
+                  activeTab === 'close'
+                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Cierre de Caja
+              </button>
+            </nav>
+          </div>
+
+          {activeTab === 'create' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
+              
+              {/* Selector de modo */}
+              <div className="mb-4 flex space-x-4">
                 <button
-                  onClick={openResendModal}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                  onClick={() => setBetMode('single')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    betMode === 'single'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700'
+                  }`}
                 >
-                  Reenviar Ticket
+                  Apuesta Individual
+                </button>
+                <button
+                  onClick={() => setBetMode('multiple')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    betMode === 'multiple'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  Apuesta Múltiple
+                </button>
+              </div>
+
+              {betMode === 'single' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Lotería</label>
+                    <select
+                      value={currentBet.lottery}
+                      onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={lotteries.filter(l => l.active).length === 0}
+                    >
+                      <option value="">Seleccione una lotería</option>
+                      {lotteries.filter(l => l.active).map(lottery => (
+                        <option key={lottery.id} value={lottery.name}>{lottery.name} - {lottery.time}</option>
+                      ))}
+                    </select>
+                    {lotteries.filter(l => l.active).length === 0 && (
+                      <p className="text-red-600 text-sm mt-2">No hay loterías activas en este momento</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad (Cifras)</label>
+                    <select
+                      value={currentBet.digits}
+                      onChange={(e) => {
+                        const newDigits = e.target.value;
+                        setCurrentBet({
+                          ...currentBet, 
+                          digits: newDigits,
+                          number: currentBet.number.slice(0, parseInt(newDigits))
+                        });
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="2">2 Cifras</option>
+                      <option value="3">3 Cifras</option>
+                      <option value="4">4 Cifras</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Número Apostado</label>
+                    <input
+                      type="text"
+                      value={currentBet.number}
+                      onChange={(e) => handleNumberChange(e.target.value.replace(/\D/g, ''))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder={`Ej: ${'12'.substring(0, parseInt(currentBet.digits))}`}
+                      maxLength={parseInt(currentBet.digits)}
+                    />
+                    <p className="text-sm text-gray-500 mt-1">Debe ingresar exactamente {currentBet.digits} dígito{parseInt(currentBet.digits) > 1 ? 's' : ''}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor de la Apuesta (COP)</label>
+                    <input
+                      type="number"
+                      value={currentBet.amount}
+                      onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ej: 5000"
+                    />
+                    {parseInt(currentBet.amount) > 20000 && (
+                      <p className="text-yellow-600 text-sm mt-2">Esta apuesta requiere aprobación del administrador</p>
+                    )}
+                    {parseInt(currentBet.digits) === 4 && parseInt(currentBet.amount) > 5000 && (
+                      <p className="text-red-600 text-sm mt-2">Máximo $5,000 para 4 cifras</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Loterías</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                      {lotteries.filter(l => l.active).map(lottery => (
+                        <label key={lottery.name} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={multiLotteries.includes(lottery.name)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setMultiLotteries([...multiLotteries, lottery.name]);
+                              } else {
+                                setMultiLotteries(multiLotteries.filter(name => name !== lottery.name));
+                              }
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">{lottery.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad</label>
+                      <select
+                        value={currentBet.digits}
+                        onChange={(e) => setCurrentBet({...currentBet, digits: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="2">2 Cifras</option>
+                        <option value="3">3 Cifras</option>
+                        <option value="4">4 Cifras</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Número</label>
+                      <input
+                        type="text"
+                        value={currentBet.number}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          if (val.length <= parseInt(currentBet.digits)) {
+                            setCurrentBet({...currentBet, number: val});
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ej: 12"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Monto por Lotería</label>
+                      <input
+                        type="number"
+                        value={currentBet.amount}
+                        onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ej: 2000"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6">
+                <button
+                  onClick={handleAddBet}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-300 font-semibold"
+                >
+                  {betMode === 'single' ? 'Añadir Apuesta' : `Añadir ${multiLotteries.length} Apuestas`}
                 </button>
               </div>
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Crear Nueva Apuesta</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Lotería</label>
-                <select
-                  value={currentBet.lottery}
-                  onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={lotteries.filter(l => l.active).length === 0}
-                >
-                  <option value="">Seleccione una lotería</option>
-                  {lotteries.filter(l => l.active).map(lottery => (
-                    <option key={lottery.id} value={lottery.name}>{lottery.name} - {lottery.time}</option>
-                  ))}
-                </select>
-                {lotteries.filter(l => l.active).length === 0 && (
-                  <p className="text-red-600 text-sm mt-2">No hay loterías activas en este momento</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad (Cifras)</label>
-                <select
-                  value={currentBet.digits}
-                  onChange={(e) => {
-                    const newDigits = e.target.value;
-                    setCurrentBet({
-                      ...currentBet, 
-                      digits: newDigits,
-                      number: currentBet.number.slice(0, parseInt(newDigits))
-                    });
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="2">2 Cifras</option>
-                  <option value="3">3 Cifras</option>
-                  <option value="4">4 Cifras</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número Apostado</label>
-                <input
-                  type="text"
-                  value={currentBet.number}
-                  onChange={(e) => handleNumberChange(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder={`Ej: ${'12'.substring(0, parseInt(currentBet.digits))}`}
-                  maxLength={parseInt(currentBet.digits)}
-                />
-                <p className="text-sm text-gray-500 mt-1">Debe ingresar exactamente {currentBet.digits} dígito{parseInt(currentBet.digits) > 1 ? 's' : ''}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Valor de la Apuesta (COP)</label>
-                <input
-                  type="number"
-                  value={currentBet.amount}
-                  onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ej: 5000"
-                />
-                {parseInt(currentBet.amount) > 20000 && (
-                  <p className="text-yellow-600 text-sm mt-2">Esta apuesta requiere aprobación del administrador</p>
-                )}
-                {parseInt(currentBet.digits) === 4 && parseInt(currentBet.amount) > 5000 && (
-                  <p className="text-red-600 text-sm mt-2">Máximo $5,000 para 4 cifras</p>
-                )}
-              </div>
+          {activeTab === 'sales' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
+              {todayTickets.length === 0 ? (
+                <p className="text-gray-500">No hay ventas registradas hoy.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lotería</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {todayTickets.map((ticket, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{ticket.ticketId}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.lottery || '-'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.number || '-'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-bold">${ticket.total.toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.customerName || 'Sin nombre'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">+57{ticket.customerPhone}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            {new Date(ticket.timestamp).toLocaleTimeString('es-CO')}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => openResendModal(ticket)}
+                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
+                            >
+                              Reenviar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-            <div className="mt-6">
-              <button
-                onClick={handleAddBet}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-300 font-semibold"
-              >
-                Añadir Apuesta al Tiquete
-              </button>
-            </div>
-          </div>
+          )}
 
-          {betList.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          {activeTab === 'close' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Cierre de Caja</h2>
+              <p className="text-gray-600 mb-6">Genera reportes de cierre por fechas específicas.</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={dailyClose}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
+                >
+                  Cierre de Hoy
+                </button>
+                <button
+                  onClick={openDateRangeModal}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
+                >
+                  Cierre por Rango de Fechas
+                </button>
+              </div>
+            </div>
+          )}
+
+          {betList.length > 0 && activeTab === 'create' && (
+            <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
               <div className="space-y-3">
                 {betList.map(bet => (
@@ -1243,51 +1502,44 @@ const App = () => {
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Número del Cliente (solo dígitos)</label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                  +57
-                </span>
+          {activeTab === 'create' && (
+            <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Cliente</label>
                 <input
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="3001234567"
-                  maxLength={10}
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: Juan Pérez"
                 />
               </div>
-            </div>
-            <button
-              onClick={confirmTicket}
-              disabled={betList.length === 0}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
-            >
-              Generar y Enviar Tiquete
-            </button>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Cierre de Caja</h3>
-            <p className="text-gray-600 mb-4">Genera reportes de cierre por fechas específicas.</p>
-            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Número del Cliente (solo dígitos)</label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                    +57
+                  </span>
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="3001234567"
+                    maxLength={10}
+                  />
+                </div>
+              </div>
               <button
-                onClick={dailyClose}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
+                onClick={confirmTicket}
+                disabled={betList.length === 0}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
               >
-                Cierre de Hoy
-              </button>
-              <button
-                onClick={generateDateRangeReport}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-              >
-                Cierre por Rango de Fechas
+                Generar y Enviar Tiquete
               </button>
             </div>
-          </div>
+          )}
 
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1297,7 +1549,8 @@ const App = () => {
                   <h4 className="font-semibold mb-2">Resumen del Tiquete:</h4>
                   <p>Total: ${betList.reduce((sum, bet) => sum + parseInt(bet.amount), 0).toLocaleString()}</p>
                   <p>Número de apuestas: {betList.length}</p>
-                  <p>Número de cliente: +57{customerPhone}</p>
+                  <p>Cliente: {customerName || 'Sin nombre'}</p>
+                  <p>Teléfono: +57{customerPhone}</p>
                 </div>
                 <div className="flex space-x-3">
                   <button
@@ -1317,14 +1570,23 @@ const App = () => {
             </div>
           )}
 
-          {/* 🔥 Modal de reenvío */}
-          {showResendModal && (
+          {showResendModal && resendTicketData && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Reenviar Ticket</h3>
                 <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Cliente</label>
+                  <input
+                    type="text"
+                    value={resendTicketData.customerName}
+                    onChange={(e) => setResendTicketData({...resendTicketData, customerName: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nombre del cliente"
+                  />
+                </div>
+                <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Número de teléfono (original: +57{lastTicket?.customerPhone})
+                    Número de teléfono (original: +57{resendTicketData.originalPhone})
                   </label>
                   <div className="flex">
                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
@@ -1332,8 +1594,8 @@ const App = () => {
                     </span>
                     <input
                       type="tel"
-                      value={resendPhone}
-                      onChange={(e) => setResendPhone(e.target.value.replace(/\D/g, ''))}
+                      value={resendTicketData.customerPhone}
+                      onChange={(e) => setResendTicketData({...resendTicketData, customerPhone: e.target.value.replace(/\D/g, '')})}
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="3001234567"
                       maxLength={10}
@@ -1352,6 +1614,48 @@ const App = () => {
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-300"
                   >
                     Reenviar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showDateRangeModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Rango de Fechas para Cierre</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Inicio</label>
+                    <input
+                      type="date"
+                      value={dateRange.start}
+                      onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Fin</label>
+                    <input
+                      type="date"
+                      value={dateRange.end}
+                      onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowDateRangeModal(false)}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={generateDateRangeReport}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                  >
+                    Generar Reporte
                   </button>
                 </div>
               </div>
