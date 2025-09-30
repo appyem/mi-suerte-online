@@ -28,7 +28,7 @@ const App = () => {
   const [selectedSeller, setSelectedSeller] = useState('');
   const reportRef = useRef();
 
-  // URL del backend (AJUSTA ESTA URL CON TU URL REAL DE RENDER)
+  // 🔴 REEMPLAZA ESTA URL CON TU URL REAL DE RENDER
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
   // Definir todas las loterías con sus horarios
@@ -364,31 +364,97 @@ const App = () => {
         });
       });
       
-      try {
-        await fetch(`${BACKEND_URL}/api/payments`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            seller: currentUser.username,
-            date: new Date().toLocaleDateString('es-CO'),
-            totalSales,
-            commissionRate,
-            commissionAmount,
-            netAmount,
-            ticketCount
-          }),
-        });
-      } catch (paymentError) {
-        console.warn('No se pudo registrar el pago:', paymentError);
-      }
-      
       window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
       alert('Reporte diario enviado exitosamente');
     } catch (error) {
       console.error('Error en cierre diario:', error);
       alert(`Error al generar el reporte diario: ${error.message || 'Verifique la conexión'}`);
+    }
+  };
+
+  const generateDateRangeReport = async () => {
+    const startDateStr = prompt('Ingrese la fecha de inicio (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!startDateStr) {
+      alert('Operación cancelada');
+      return;
+    }
+    
+    const endDateStr = prompt('Ingrese la fecha de fin (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!endDateStr) {
+      alert('Operación cancelada');
+      return;
+    }
+    
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      alert('Formato de fecha inválido. Use YYYY-MM-DD');
+      return;
+    }
+    
+    if (startDate > endDate) {
+      alert('La fecha de inicio no puede ser mayor que la fecha de fin');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/tickets?startDate=${startDateStr}&endDate=${endDateStr}&seller=${currentUser.username}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+      
+      const ticketsInRange = await response.json();
+      const totalSales = ticketsInRange.reduce((sum, ticket) => sum + ticket.total, 0);
+      const ticketCount = ticketsInRange.length;
+      
+      if (ticketCount === 0) {
+        alert(`No hay ventas en el rango de fechas: ${startDateStr} al ${endDateStr}`);
+        return;
+      }
+      
+      const seller = sellers.find(s => s.username === currentUser.username);
+      const commissionRate = seller ? seller.commission : 10;
+      const commissionAmount = Math.round(totalSales * commissionRate / 100);
+      const netAmount = totalSales - commissionAmount;
+      
+      const reportPhone = prompt('Ingrese el número de teléfono para enviar el reporte (solo dígitos):', '');
+      if (!reportPhone || reportPhone.trim() === '') {
+        alert('Operación cancelada');
+        return;
+      }
+      
+      const cleanPhone = reportPhone.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos)');
+        return;
+      }
+      
+      let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊\n\n`;
+      reportMessage += `Rango de Fechas: ${new Date(startDateStr).toLocaleDateString('es-CO')} al ${new Date(endDateStr).toLocaleDateString('es-CO')}\n`;
+      reportMessage += `Vendedor: ${currentUser.username}\n`;
+      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
+      reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
+      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}\n`;
+      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n\n`;
+      reportMessage += `Detalles de Ventas:\n`;
+      
+      ticketsInRange.forEach((ticket, index) => {
+        reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
+        reportMessage += `Fecha: ${new Date(ticket.timestamp).toLocaleDateString('es-CO')}\n`;
+        reportMessage += `Total: $${ticket.total.toLocaleString()}\n`;
+        ticket.bets.forEach((bet, betIndex) => {
+          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
+        });
+      });
+      
+      window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(reportMessage)}`, '_blank');
+      
+      alert(`Reporte de cierre generado exitosamente para el rango: ${startDateStr} al ${endDateStr}`);
+    } catch (error) {
+      console.error('Error en cierre por rango de fechas:', error);
+      alert(`Error al generar el reporte: ${error.message || 'Verifique la conexión'}`);
     }
   };
 
@@ -453,7 +519,7 @@ const App = () => {
     }
   }, [userRole]);
 
-  // FUNCIONES CORREGIDAS PARA VENDEDORES
+  // FUNCIONES PARA VENDEDORES
   const toggleSellerStatus = async (sellerId, currentStatus) => {
     try {
       const seller = sellers.find(s => s._id === sellerId);
@@ -534,7 +600,7 @@ const App = () => {
     }
   };
 
-  // FUNCIONES DE REPORTES CORREGIDAS
+  // FUNCIONES DE REPORTES
   const getMostPlayedNumbers = () => {
     const numberCount = {};
     tickets.forEach(ticket => {
@@ -818,7 +884,7 @@ const App = () => {
             </div>
           )}
 
-          {/* Gestión de Vendedores - CORREGIDO */}
+          {/* Gestión de Vendedores - CON CONTRASEÑA */}
           {activeTab === 'sellers' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
@@ -887,7 +953,7 @@ const App = () => {
             </div>
           )}
 
-          {/* Resto de componentes... */}
+          {/* Pagos a Vendedores */}
           {activeTab === 'payments' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Pagos a Vendedores</h2>
@@ -1057,7 +1123,6 @@ const App = () => {
     );
   }
 
-  // Panel de vendedor (similar al anterior, omitido por brevedad)
   if (userRole === 'seller') {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -1223,25 +1288,34 @@ const App = () => {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Cierre de Caja Diario</h3>
-            <p className="text-gray-600 mb-4">Envía un reporte resumido del día al administrador por WhatsApp con el desglose de comisiones.</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Cierre de Caja</h3>
+            <p className="text-gray-600 mb-4">Genera reportes de cierre por fechas específicas.</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={dailyClose}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
+              >
+                Cierre de Hoy
+              </button>
+              <button
+                onClick={generateDateRangeReport}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
+              >
+                Cierre por Rango de Fechas
+              </button>
+            </div>
+            
             {(() => {
               const seller = sellers.find(s => s.username === currentUser.username);
               if (seller) {
                 return (
-                  <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm font-medium text-blue-900">Tu comisión: {seller.commission}%</p>
                   </div>
                 );
               }
               return null;
             })()}
-            <button
-              onClick={dailyClose}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-            >
-              Realizar Cierre del Día
-            </button>
           </div>
 
           {showConfirmModal && (

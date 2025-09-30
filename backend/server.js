@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔴 REEMPLAZA ESTA URL CON TU URI REAL DE MONGODB ATLAS
+// 🔴 REEMPLAZA ESTA LÍNEA CON TU URI REAL DE MONGODB ATLAS
 const MONGODB_URI = 'mongodb+srv://adminuser:Appy2025@misuertecluster.hymrcja.mongodb.net/?retryWrites=true&w=majority&appName=MiSuerteCluster';
 
 // Conectar a MongoDB
@@ -100,17 +100,25 @@ app.post('/api/tickets', async (req, res) => {
   }
 });
 
-// Ruta para obtener todos los tickets
+// Ruta para obtener tickets con soporte de rango de fechas
 app.get('/api/tickets', async (req, res) => {
   try {
-    const { date, seller } = req.query;
+    const { date, startDate, endDate, seller } = req.query;
     let filter = {};
     
+    // Soporte para fecha única (comportamiento anterior)
     if (date) {
-      const startDate = new Date(date);
-      const endDate = new Date(date);
-      endDate.setDate(endDate.getDate() + 1);
-      filter.timestamp = { $gte: startDate, $lt: endDate };
+      const startDateSingle = new Date(date);
+      const endDateSingle = new Date(date);
+      endDateSingle.setDate(endDateSingle.getDate() + 1);
+      filter.timestamp = { $gte: startDateSingle, $lt: endDateSingle };
+    }
+    // Soporte para rango de fechas (nuevo)
+    else if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setDate(end.getDate() + 1); // Incluir todo el día de fin
+      filter.timestamp = { $gte: start, $lt: end };
     }
     
     if (seller) {
@@ -120,6 +128,7 @@ app.get('/api/tickets', async (req, res) => {
     const tickets = await Ticket.find(filter).sort({ timestamp: -1 });
     res.json(tickets);
   } catch (error) {
+    console.error('Error al obtener tickets:', error);
     res.status(500).json({ error: error.message });
   }
 });
