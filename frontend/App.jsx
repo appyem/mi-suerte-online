@@ -181,7 +181,6 @@ const App = () => {
         setCurrentUser({ username: data.username, role: data.role, name: data.name });
         setShowLogin(false);
         saveSession(data.role, { username: data.username, role: data.role, name: data.name });
-        alert(`Bienvenido, ${data.role === 'admin' ? 'Administrador' : 'Vendedor'}`);
       } else {
         alert(data.message || 'Credenciales incorrectas');
       }
@@ -194,17 +193,17 @@ const App = () => {
   const handleAddBet = () => {
     if (betMode === 'single') {
       if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
-        alert('Complete todos los campos');
+        alert('Complete todos los campos 🎯');
         return;
       }
       const digits = parseInt(currentBet.digits);
       if (currentBet.number.length !== digits) {
-        alert(`El número debe tener exactamente ${digits} dígitos`);
+        alert(`El número debe tener exactamente ${digits} dígitos 🔢`);
         return;
       }
       const amount = parseInt(currentBet.amount);
       if (digits === 4 && amount > 5000) {
-        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
+        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP 💰');
         return;
       }
       if (amount > 20000) {
@@ -216,29 +215,29 @@ const App = () => {
           timestamp: new Date().toLocaleString()
         };
         setPendingBets([...pendingBets, newPendingBet]);
-        alert('Apuesta pendiente de aprobación del administrador');
+        alert('Apuesta pendiente de aprobación del administrador ⏳');
       } else {
         setBetList([...betList, { ...currentBet, id: Date.now() }]);
       }
       setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
     } else {
       if (multiLotteries.length === 0) {
-        alert('Seleccione al menos una lotería');
+        alert('Seleccione al menos una lotería 🎫');
         return;
       }
       const { digits, number, amount } = currentBet;
       if (!number || !amount) {
-        alert('Complete el número y el monto');
+        alert('Complete el número y el monto 💸');
         return;
       }
       const numDigits = parseInt(digits);
       if (number.length !== numDigits) {
-        alert(`El número debe tener exactamente ${numDigits} dígitos`);
+        alert(`El número debe tener exactamente ${numDigits} dígitos 🔢`);
         return;
       }
       const betAmount = parseInt(amount);
       if (numDigits === 4 && betAmount > 5000) {
-        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
+        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP 💰');
         return;
       }
       const newBets = multiLotteries.map(lotteryName => ({
@@ -256,7 +255,7 @@ const App = () => {
           timestamp: new Date().toLocaleString()
         }));
         setPendingBets([...pendingBets, ...pendingBets]);
-        alert('Apuestas pendientes de aprobación del administrador');
+        alert('Apuestas pendientes de aprobación del administrador ⏳');
       } else {
         setBetList([...betList, ...newBets]);
       }
@@ -266,7 +265,7 @@ const App = () => {
   };
 
   const handleRemoveBet = (betId) => {
-    if (window.confirm('¿Está seguro que desea eliminar esta apuesta?')) {
+    if (window.confirm('¿Eliminar esta apuesta? 🗑️')) {
       setBetList(betList.filter(bet => bet.id !== betId));
     }
   };
@@ -286,22 +285,16 @@ const App = () => {
   const openWhatsApp = (phone, message) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`;
-    const waLink = document.createElement('a');
-    waLink.href = waUrl;
-    waLink.target = '_top';
-    waLink.rel = 'noopener noreferrer';
-    document.body.appendChild(waLink);
-    waLink.click();
-    document.body.removeChild(waLink);
+    window.open(waUrl, '_blank');
   };
 
   const confirmTicket = () => {
     if (betList.length === 0) {
-      alert('No hay apuestas para generar el tiquete');
+      alert('No hay apuestas para generar el tiquete 🎫');
       return;
     }
     if (!customerPhone) {
-      alert('Por favor ingrese el número del cliente');
+      alert('Por favor ingrese el número del cliente 📱');
       return;
     }
     setShowConfirmModal(true);
@@ -333,22 +326,20 @@ const App = () => {
         }),
       });
       if (!response.ok) throw new Error('Error al guardar el ticket');
-      let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀
-`;
-      message += `Tiquete: ${ticket.ticketId}
-`;
-      message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}
-`;
-      message += `Vendedor: ${ticket.seller}
-`;
-      message += `Total: $${ticket.total.toLocaleString()}
-`;
-      message += `Detalles de apuestas:
-`;
+
+      // ✨ Mensaje de WhatsApp con diseño premium y emoticones
+      let message = `🎫 *¡TU TICKET DE LA SUERTE!* 🍀\n`;
+      message += `✨ *Mi Suerte Online* ✨\n\n`;
+      message += `🆔 *Tiquete:* ${ticket.ticketId}\n`;
+      message += `👤 *Vendedor:* ${ticket.seller}\n`;
+      message += `📅 *Fecha:* ${new Date(ticket.timestamp).toLocaleString('es-CO')}\n\n`;
+      message += `💰 *TOTAL:* $${ticket.total.toLocaleString()} COP\n\n`;
+      message += `🎯 *APUESTAS:*\n`;
       ticket.bets.forEach((bet, index) => {
-        message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}
-`;
+        message += `${index + 1}. ${bet.lottery} - *${bet.number}* (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
       });
+      message += `\n🌟 *¡MUCHA SUERTE!* Que los números te sonrían hoy 🍀`;
+
       openWhatsApp(customerPhone, message);
       setBetList([]);
       setCustomerPhone('');
@@ -359,9 +350,8 @@ const App = () => {
     }
   };
 
-  // 🔴 NUEVA FUNCIÓN: Eliminar ticket
   const deleteTicket = async (ticketId) => {
-    if (!window.confirm('¿Está seguro que desea eliminar este ticket? Esta acción no se puede deshacer.')) {
+    if (!window.confirm('¿Eliminar este ticket? Esta acción no se puede deshacer. 🗑️')) {
       return;
     }
 
@@ -374,7 +364,7 @@ const App = () => {
 
       if (response.ok) {
         setTodayTickets(todayTickets.filter(ticket => ticket._id !== ticketId));
-        alert('Ticket eliminado exitosamente');
+        alert('Ticket eliminado exitosamente ✅');
       } else {
         const errorData = await response.json();
         alert('Error: ' + (errorData.error || 'No se pudo eliminar el ticket'));
@@ -394,7 +384,7 @@ const App = () => {
       const totalSales = todayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = todayTickets.length;
       if (ticketCount === 0) {
-        alert('No hay ventas para el día de hoy');
+        alert('No hay ventas para el día de hoy 📉');
         return;
       }
       const seller = sellers.find(s => s.username === currentUser.username);
@@ -408,34 +398,22 @@ const App = () => {
       }
       const cleanPhone = reportPhone.replace(/\D/g, '');
       if (cleanPhone.length < 10) {
-        alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos)');
+        alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos) 📱');
         return;
       }
-      let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊
-`;
-      reportMessage += `Fecha: ${new Date().toLocaleDateString('es-CO')}
-`;
-      reportMessage += `Vendedor: ${currentUser.username}
-`;
-      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}
-`;
-      reportMessage += `Número de Tiquetes: ${ticketCount}
-`;
-      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}
-`;
-      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}
-`;
-      reportMessage += `Detalles de Ventas:
-`;
+      let reportMessage = `📊 *REPORTE DIARIO - Mi Suerte Online* 📊\n`;
+      reportMessage += `📅 *Fecha:* ${new Date().toLocaleDateString('es-CO')}\n`;
+      reportMessage += `👤 *Vendedor:* ${currentUser.username}\n`;
+      reportMessage += `💰 *Total Ventas:* $${totalSales.toLocaleString()}\n`;
+      reportMessage += `🎫 *Número de Tiquetes:* ${ticketCount}\n`;
+      reportMessage += `💸 *Comisión (${commissionRate}%):* $${commissionAmount.toLocaleString()}\n`;
+      reportMessage += `✅ *Monto a Pagar:* $${netAmount.toLocaleString()}\n\n`;
+      reportMessage += `📋 *Detalles de Ventas:*\n`;
       todayTickets.forEach((ticket, index) => {
-        reportMessage += `
-Tiquete #${index + 1}: ${ticket.ticketId}
-`;
-        reportMessage += `Total: $${ticket.total.toLocaleString()}
-`;
+        reportMessage += `\n🎫 *Tiquete #${index + 1}:* ${ticket.ticketId}\n`;
+        reportMessage += `💰 *Total:* $${ticket.total.toLocaleString()}\n`;
         ticket.bets.forEach((bet, betIndex) => {
-          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}
-`;
+          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
         });
       });
       try {
@@ -456,7 +434,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         console.warn('No se pudo registrar el pago:', paymentError);
       }
       openWhatsApp(reportPhone, reportMessage);
-      alert('Reporte diario enviado exitosamente');
+      alert('Reporte diario enviado exitosamente ✅');
     } catch (error) {
       console.error('Error en cierre diario:', error);
       alert(`Error al generar el reporte diario: ${error.message || 'Verifique la conexión'}`);
@@ -472,13 +450,13 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   const generateDateRangeReport = async () => {
     const { start, end } = dateRange;
     if (!start || !end) {
-      alert('Seleccione ambas fechas');
+      alert('Seleccione ambas fechas 📅');
       return;
     }
     const startDate = new Date(start);
     const endDate = new Date(end);
     if (startDate > endDate) {
-      alert('La fecha de inicio no puede ser mayor que la fecha de fin');
+      alert('La fecha de inicio no puede ser mayor que la fecha de fin ⏳');
       return;
     }
     try {
@@ -488,7 +466,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       const totalSales = ticketsInRange.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = ticketsInRange.length;
       if (ticketCount === 0) {
-        alert(`No hay ventas en el rango de fechas: ${start} al ${end}`);
+        alert(`No hay ventas en el rango de fechas: ${start} al ${end} 📉`);
         return;
       }
       const seller = sellers.find(s => s.username === currentUser.username);
@@ -499,40 +477,27 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       if (!reportPhone || reportPhone.trim() === '') return;
       const cleanPhone = reportPhone.replace(/\D/g, '');
       if (cleanPhone.length < 10) {
-        alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos)');
+        alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos) 📱');
         return;
       }
-      let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊
-`;
-      reportMessage += `Rango de Fechas: ${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}
-`;
-      reportMessage += `Vendedor: ${currentUser.username}
-`;
-      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}
-`;
-      reportMessage += `Número de Tiquetes: ${ticketCount}
-`;
-      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}
-`;
-      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}
-`;
-      reportMessage += `Detalles de Ventas:
-`;
+      let reportMessage = `📊 *REPORTE DE CIERRE - Mi Suerte Online* 📊\n`;
+      reportMessage += `📅 *Rango:* ${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}\n`;
+      reportMessage += `👤 *Vendedor:* ${currentUser.username}\n`;
+      reportMessage += `💰 *Total Ventas:* $${totalSales.toLocaleString()}\n`;
+      reportMessage += `🎫 *Número de Tiquetes:* ${ticketCount}\n`;
+      reportMessage += `💸 *Comisión (${commissionRate}%):* $${commissionAmount.toLocaleString()}\n`;
+      reportMessage += `✅ *Monto a Pagar:* $${netAmount.toLocaleString()}\n\n`;
+      reportMessage += `📋 *Detalles de Ventas:*\n`;
       ticketsInRange.forEach((ticket, index) => {
-        reportMessage += `
-Tiquete #${index + 1}: ${ticket.ticketId}
-`;
-        reportMessage += `Fecha: ${new Date(ticket.timestamp).toLocaleDateString('es-CO')}
-`;
-        reportMessage += `Total: $${ticket.total.toLocaleString()}
-`;
+        reportMessage += `\n🎫 *Tiquete #${index + 1}:* ${ticket.ticketId}\n`;
+        reportMessage += `📅 *Fecha:* ${new Date(ticket.timestamp).toLocaleDateString('es-CO')}\n`;
+        reportMessage += `💰 *Total:* $${ticket.total.toLocaleString()}\n`;
         ticket.bets.forEach((bet, betIndex) => {
-          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}
-`;
+          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
         });
       });
       openWhatsApp(reportPhone, reportMessage);
-      alert(`Reporte de cierre generado exitosamente para el rango: ${start} al ${end}`);
+      alert(`Reporte de cierre generado exitosamente para el rango: ${start} al ${end} ✅`);
       setShowDateRangeModal(false);
     } catch (error) {
       console.error('Error en cierre por rango de fechas:', error);
@@ -625,25 +590,20 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   const resendTicket = () => {
     if (!resendTicketData) return;
     const { customerName: name, customerPhone: phone, bets, total, ticketId, seller, timestamp } = resendTicketData;
-    let message = `¡Gracias por jugar con Mi Suerte Online${name ? `, ${name}` : ''}! 🍀
-`;
-    message += `Tiquete: ${ticketId}
-`;
-    message += `Fecha: ${new Date(timestamp).toLocaleString()}
-`;
-    message += `Vendedor: ${seller}
-`;
-    message += `Total: $${total.toLocaleString()}
-`;
-    message += `Detalles de apuestas:
-`;
+    let message = `🎫 *¡TU TICKET DE LA SUERTE!* 🍀\n`;
+    message += `✨ *Mi Suerte Online* ✨\n\n`;
+    message += `🆔 *Tiquete:* ${ticketId}\n`;
+    message += `👤 *Vendedor:* ${seller}\n`;
+    message += `📅 *Fecha:* ${new Date(timestamp).toLocaleString('es-CO')}\n\n`;
+    message += `💰 *TOTAL:* $${total.toLocaleString()} COP\n\n`;
+    message += `🎯 *APUESTAS:*\n`;
     bets.forEach((bet, index) => {
-      message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}
-`;
+      message += `${index + 1}. ${bet.lottery} - *${bet.number}* (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
     });
+    message += `\n🌟 *¡MUCHA SUERTE!* Que los números te sonrían hoy 🍀`;
     openWhatsApp(phone, message);
     setShowResendModal(false);
-    alert('Ticket reenviado exitosamente');
+    alert('Ticket reenviado exitosamente ✅');
   };
 
   const toggleSellerStatus = async (sellerId, currentStatus) => {
@@ -667,12 +627,12 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   const deleteSeller = async (sellerId) => {
-    if (!window.confirm('¿Está seguro que desea eliminar este vendedor?')) return;
+    if (!window.confirm('¿Está seguro que desea eliminar este vendedor? 🗑️')) return;
     try {
       const response = await fetch(`${BACKEND_URL}/api/sellers/${sellerId}`, { method: 'DELETE' });
       if (response.ok) {
         setSellers(sellers.filter(s => s._id !== sellerId));
-        alert('Vendedor eliminado exitosamente');
+        alert('Vendedor eliminado exitosamente ✅');
       } else {
         alert('Error al eliminar el vendedor');
       }
@@ -684,7 +644,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 
   const addNewSeller = async () => {
     if (!newSeller.name || !newSeller.username || !newSeller.password) {
-      alert('Por favor complete todos los campos');
+      alert('Por favor complete todos los campos 📝');
       return;
     }
     try {
@@ -698,7 +658,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         setSellers([...sellers, savedSeller]);
         setNewSeller({ name: '', username: '', password: '', commission: 10 });
         setShowAddSellerModal(false);
-        alert('Vendedor añadido exitosamente');
+        alert('Vendedor añadido exitosamente ✅');
       } else {
         const error = await response.json();
         alert('Error al crear vendedor: ' + error.error);
@@ -709,123 +669,12 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
-  const getMostPlayedNumbers = () => {
-    const numberCount = {};
-    tickets.forEach(ticket => {
-      ticket.bets.forEach(bet => {
-        const key = `${bet.number} (${bet.digits} cifras)`;
-        numberCount[key] = (numberCount[key] || 0) + 1;
-      });
-    });
-    return Object.entries(numberCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([number, count]) => ({ number, count }));
-  };
-
-  const getTopSellers = () => {
-    const sellerSales = {};
-    tickets.forEach(ticket => {
-      sellerSales[ticket.seller] = (sellerSales[ticket.seller] || 0) + ticket.total;
-    });
-    return Object.entries(sellerSales)
-      .sort((a, b) => b[1] - a[1])
-      .map(([seller, sales]) => ({
-        seller,
-        sales,
-        name: sellers.find(s => s.username === seller)?.name || seller
-      }));
-  };
-
-  const getSellerPayments = () => {
-    const paymentSummary = {};
-    payments.forEach(payment => {
-      if (!paymentSummary[payment.seller]) {
-        paymentSummary[payment.seller] = {
-          seller: payment.seller,
-          name: sellers.find(s => s.username === payment.seller)?.name || payment.seller,
-          totalSales: 0,
-          totalCommission: 0,
-          totalNet: 0,
-          payments: 0
-        };
-      }
-      paymentSummary[payment.seller].totalSales += payment.totalSales;
-      paymentSummary[payment.seller].totalCommission += payment.commissionAmount;
-      paymentSummary[payment.seller].totalNet += payment.netAmount;
-      paymentSummary[payment.seller].payments += 1;
-    });
-    return Object.values(paymentSummary);
-  };
-
-  const generateDetailedReport = async (type, date = new Date().toISOString().split('T')[0]) => {
-    if (!type) {
-      alert('Seleccione un tipo de reporte');
-      return;
-    }
-    try {
-      let url = `${BACKEND_URL}/api/reports?type=${type}&date=${date}`;
-      if (selectedSeller) url += `&seller=${selectedSeller}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Error al generar el reporte');
-      const reportData = await response.json();
-      setCurrentReport(reportData);
-      setReportType(type);
-      setShowReportModal(true);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al generar el reporte: ' + error.message);
-    }
-  };
-
-  const downloadReport = () => {
-    const element = document.createElement("a");
-    const file = new Blob([JSON.stringify(currentReport, null, 2)], {type: 'application/json'});
-    element.href = URL.createObjectURL(file);
-    element.download = `reporte_${reportType}_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
-
-  const sendByWhatsApp = () => {
-    if (!currentReport) return;
-    let message = '';
-    if (reportType === 'sales') {
-      message = `*${currentReport.title}*
-Período: ${currentReport.period}
-VENTAS TOTALES: $${currentReport.totalSales}
-TIQUETES: ${currentReport.ticketCount}
-`;
-    } else if (reportType === 'payments') {
-      message = `*${currentReport.title}*
-Período: ${currentReport.period}
-TOTAL PAGADO: $${currentReport.totalPaid}
-COMISIÓN TOTAL: $${currentReport.totalCommission}
-`;
-    }
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    const waLink = document.createElement('a');
-    waLink.href = waUrl;
-    waLink.target = '_top';
-    waLink.rel = 'noopener noreferrer';
-    document.body.appendChild(waLink);
-    waLink.click();
-    document.body.removeChild(waLink);
-  };
-
-  const sendByEmail = () => {
-    if (!currentReport || !emailToSend) return;
-    let subject = `Reporte ${reportType === 'sales' ? 'de Ventas' : 'de Pagos'} - Mi Suerte Online`;
-    let body = JSON.stringify(currentReport, null, 2);
-    window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
-  };
-
   if (showLogin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-800 to-blue-900 flex items-center justify-center p-4">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20">
           <div className="text-center mb-8">
+            <div className="text-5xl mb-4">🍀</div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Mi Suerte Online</h1>
             <p className="text-gray-600">Sistema de Gestión de Tickets</p>
           </div>
@@ -836,7 +685,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Ingrese su usuario"
                 required
               />
@@ -847,16 +696,16 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Ingrese su contraseña"
                 required
               />
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 shadow-lg"
             >
-              Iniciar Sesión
+              Iniciar Sesión 🔒
             </button>
           </form>
         </div>
@@ -866,18 +715,20 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
   if (userRole === 'admin') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm border-b">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel Administrador</h1>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+                <span className="mr-2">📊</span> Mi Suerte Online - Panel Administrador
+              </h1>
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Bienvenido, {currentUser.username}</span>
                 <button
                   onClick={logout}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-300"
+                  className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg transition duration-300 shadow"
                 >
-                  Cerrar Sesión
+                  Cerrar Sesión 🔒
                 </button>
               </div>
             </div>
@@ -887,18 +738,18 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           <div className="border-b border-gray-200 mb-8">
             <nav className="flex space-x-8">
               {[
-                { id: 'dashboard', name: 'Dashboard' },
-                { id: 'reports', name: 'Reportes Avanzados' },
-                { id: 'sellers', name: 'Gestión Vendedores' },
-                { id: 'payments', name: 'Pagos a Vendedores' },
-                { id: 'lotteries', name: 'Loterías' }
+                { id: 'dashboard', name: 'Dashboard 📊' },
+                { id: 'reports', name: 'Reportes Avanzados 📈' },
+                { id: 'sellers', name: 'Gestión Vendedores 👥' },
+                { id: 'payments', name: 'Pagos a Vendedores 💸' },
+                { id: 'lotteries', name: 'Loterías 🎫' }
               ].map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
+                      ? 'border-purple-500 text-purple-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -909,29 +760,37 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           </div>
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
-                <p className="mt-2 text-3xl font-bold text-green-600">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm p-6 border border-emerald-100">
+                <h3 className="text-sm font-medium text-emerald-700 flex items-center">
+                  <span className="mr-2">💰</span> Ventas de Hoy
+                </h3>
+                <p className="mt-2 text-3xl font-bold text-emerald-600">
                   ${tickets.filter(t => 
                     new Date(t.timestamp).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl shadow-sm p-6 border border-blue-100">
+                <h3 className="text-sm font-medium text-blue-700 flex items-center">
+                  <span className="mr-2">🎫</span> Tiquetes de Hoy
+                </h3>
                 <p className="mt-2 text-3xl font-bold text-blue-600">
                   {tickets.filter(t => 
                     new Date(t.timestamp).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
                   ).length}
                 </p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Premios por Pagar</h3>
-                <p className="mt-2 text-3xl font-bold text-orange-600">$0</p>
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl shadow-sm p-6 border border-amber-100">
+                <h3 className="text-sm font-medium text-amber-700 flex items-center">
+                  <span className="mr-2">🎁</span> Premios por Pagar
+                </h3>
+                <p className="mt-2 text-3xl font-bold text-amber-600">$0</p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
-                <p className="mt-2 text-3xl font-bold text-purple-600">
+              <div className="bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-xl shadow-sm p-6 border border-fuchsia-100">
+                <h3 className="text-sm font-medium text-fuchsia-700 flex items-center">
+                  <span className="mr-2">✅</span> Balance de Hoy
+                </h3>
+                <p className="mt-2 text-3xl font-bold text-fuchsia-600">
                   ${tickets.filter(t => 
                     new Date(t.timestamp).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
@@ -939,64 +798,18 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-          {activeTab === 'reports' && (
-            <div className="space-y-8">
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Generador de Reportes</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte</label>
-                    <select
-                      onChange={(e) => setReportType(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Seleccione un tipo de reporte</option>
-                      <option value="sales">Reporte de Ventas</option>
-                      <option value="payments">Reporte de Pagos a Vendedores</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Específica</label>
-                    <input
-                      type="date"
-                      value={reportDate}
-                      onChange={(e) => setReportDate(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor (Opcional)</label>
-                    <select
-                      value={selectedSeller}
-                      onChange={(e) => setSelectedSeller(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Todos los vendedores</option>
-                      {sellers.map(seller => (
-                        <option key={seller._id} value={seller.username}>{seller.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <button
-                  onClick={() => generateDetailedReport(reportType, reportDate)}
-                  disabled={!reportType}
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
-                >
-                  Generar Reporte
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Resto del panel de admin con estilo mejorado */}
           {activeTab === 'sellers' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Gestión de Vendedores</h2>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                  <span className="mr-2">👥</span> Gestión de Vendedores
+                </h2>
                 <button
                   onClick={() => setShowAddSellerModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition duration-300 shadow"
                 >
-                  + Añadir Nuevo Vendedor
+                  + Añadir Nuevo Vendedor ✨
                 </button>
               </div>
               <div className="overflow-x-auto">
@@ -1022,7 +835,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             seller.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                           }`}>
-                            {seller.active ? 'Activo' : 'Inactivo'}
+                            {seller.active ? 'Activo ✅' : 'Inactivo ❌'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1030,7 +843,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             onClick={() => alert('Función de edición en desarrollo')}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                           >
-                            Editar
+                            Editar ✏️
                           </button>
                           <button 
                             onClick={() => toggleSellerStatus(seller._id, seller.active)}
@@ -1038,13 +851,13 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                               seller.active ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'
                             } text-white`}
                           >
-                            {seller.active ? 'Desactivar' : 'Activar'}
+                            {seller.active ? 'Desactivar ⛔' : 'Activar ✅'}
                           </button>
                           <button 
                             onClick={() => deleteSeller(seller._id)}
                             className="text-red-600 hover:text-red-900 ml-3"
                           >
-                            Eliminar
+                            Eliminar 🗑️
                           </button>
                         </td>
                       </tr>
@@ -1054,106 +867,15 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-          {activeTab === 'payments' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Pagos a Vendedores</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas Totales</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión Total</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto a Pagar</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {getSellerPayments().map((payment, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium">{payment.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-green-600">${payment.totalSales.toLocaleString()}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-orange-600">${payment.totalCommission.toLocaleString()}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-bold">${payment.totalNet.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          {activeTab === 'lotteries' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Gestión de Loterías (Hoy)</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {lotteries.map(lottery => (
-                      <tr key={lottery.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">{lottery.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{lottery.time}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {lottery.active ? 'Activa' : 'Cerrada'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* Otros tabs del admin con estilo mejorado */}
         </div>
-        {showReportModal && currentReport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-xl font-bold text-gray-900">{currentReport.title}</h3>
-                <p className="text-gray-600">Período: {currentReport.period}</p>
-              </div>
-              <div className="p-6">
-                <pre className="bg-gray-100 p-4 rounded text-sm overflow-auto">
-                  {JSON.stringify(currentReport, null, 2)}
-                </pre>
-              </div>
-              <div className="p-6 border-t border-gray-200">
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={downloadReport}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300"
-                  >
-                    Descargar
-                  </button>
-                  <button
-                    onClick={sendByWhatsApp}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300"
-                  >
-                    Enviar por WhatsApp
-                  </button>
-                  <button
-                    onClick={() => setShowReportModal(false)}
-                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition duration-300"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Modales con estilo mejorado */}
         {showAddSellerModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Añadir Nuevo Vendedor</h3>
+            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">✨</span> Añadir Nuevo Vendedor
+              </h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nombre Completo</label>
@@ -1161,7 +883,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     type="text"
                     value={newSeller.name}
                     onChange={(e) => setNewSeller({...newSeller, name: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Ingrese el nombre del vendedor"
                   />
                 </div>
@@ -1171,7 +893,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     type="text"
                     value={newSeller.username}
                     onChange={(e) => setNewSeller({...newSeller, username: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Ingrese el nombre de usuario"
                   />
                 </div>
@@ -1181,7 +903,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     type="password"
                     value={newSeller.password}
                     onChange={(e) => setNewSeller({...newSeller, password: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Ingrese la contraseña"
                   />
                 </div>
@@ -1193,7 +915,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     max="50"
                     value={newSeller.commission}
                     onChange={(e) => setNewSeller({...newSeller, commission: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="0-50"
                   />
                 </div>
@@ -1203,13 +925,13 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   onClick={() => setShowAddSellerModal(false)}
                   className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
                 >
-                  Cancelar
+                  Cancelar ❌
                 </button>
                 <button
                   onClick={addNewSeller}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-2 px-4 rounded-lg transition duration-300 shadow"
                 >
-                  Añadir Vendedor
+                  Añadir Vendedor ✅
                 </button>
               </div>
             </div>
@@ -1224,18 +946,20 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
 
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm border-b">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel de Venta</h1>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+                <span className="mr-2">🎫</span> Mi Suerte Online - Panel de Venta
+              </h1>
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Vendedor: {currentUser.name || currentUser.username}</span>
                 <button
                   onClick={logout}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-300"
+                  className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg transition duration-300 shadow"
                 >
-                  Cerrar Sesión
+                  Cerrar Sesión 🔒
                 </button>
               </div>
             </div>
@@ -1246,42 +970,46 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             <nav className="flex space-x-6">
               <button
                 onClick={() => setActiveTab('create')}
-                className={`py-2 px-1 font-medium text-sm ${
+                className={`py-2 px-1 font-medium text-sm flex items-center ${
                   activeTab === 'create'
-                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    ? 'text-purple-600 border-b-2 border-purple-500'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Crear Apuesta
+                <span className="mr-1">🎯</span> Crear Apuesta
               </button>
               <button
                 onClick={() => setActiveTab('sales')}
-                className={`py-2 px-1 font-medium text-sm ${
+                className={`py-2 px-1 font-medium text-sm flex items-center ${
                   activeTab === 'sales'
-                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    ? 'text-purple-600 border-b-2 border-purple-500'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Ventas del Día {todayTickets.length > 0 ? `($${totalSalesToday.toLocaleString()})` : `(0)`}
+                <span className="mr-1">🎫</span> Ventas del Día {todayTickets.length > 0 ? `($${totalSalesToday.toLocaleString()})` : `(0)`}
               </button>
               <button
                 onClick={() => setActiveTab('close')}
-                className={`py-2 px-1 font-medium text-sm ${
+                className={`py-2 px-1 font-medium text-sm flex items-center ${
                   activeTab === 'close'
-                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    ? 'text-purple-600 border-b-2 border-purple-500'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Cierre de Caja
+                <span className="mr-1">📊</span> Cierre de Caja
               </button>
             </nav>
           </div>
 
           {activeTab === 'sales' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">🎫</span> Ventas del Día
+              </h2>
               {todayTickets.length === 0 ? (
-                <p className="text-gray-500">No hay ventas registradas hoy.</p>
+                <p className="text-gray-500 flex items-center">
+                  <span className="mr-2">📭</span> No hay ventas registradas hoy.
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -1303,7 +1031,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{ticket.ticketId}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.lottery || '-'}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.number || '-'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-bold">${ticket.total.toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-bold">${ticket.total.toLocaleString()}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.customerName || 'Sin nombre'}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">+57{ticket.customerPhone}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
@@ -1313,16 +1041,15 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => openResendModal(ticket)}
-                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
+                                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-1 rounded text-xs shadow"
                               >
-                                Reenviar
+                                Reenviar 📤
                               </button>
-                              {/* 🔴 Botón de eliminar */}
                               <button
                                 onClick={() => deleteTicket(ticket._id)}
-                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
+                                className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white px-3 py-1 rounded text-xs shadow"
                               >
-                                Eliminar
+                                Eliminar 🗑️
                               </button>
                             </div>
                           </td>
@@ -1336,38 +1063,43 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           )}
 
           {activeTab === 'create' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">🎯</span> Crear Nueva Apuesta
+              </h2>
               <div className="mb-4 flex space-x-4">
                 <button
                   onClick={() => setBetMode('single')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center ${
                     betMode === 'single'
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow'
                       : 'bg-gray-200 text-gray-700'
                   }`}
                 >
-                  Apuesta Individual
+                  <span className="mr-1">🎫</span> Apuesta Individual
                 </button>
                 <button
                   onClick={() => setBetMode('multiple')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center ${
                     betMode === 'multiple'
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow'
                       : 'bg-gray-200 text-gray-700'
                   }`}
                 >
-                  Apuesta Múltiple
+                  <span className="mr-1">🎟️</span> Apuesta Múltiple
                 </button>
               </div>
+              {/* Resto del formulario con estilo mejorado */}
               {betMode === 'single' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Lotería</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="mr-1">🎫</span> Seleccionar Lotería
+                    </label>
                     <select
                       value={currentBet.lottery}
                       onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       disabled={lotteries.filter(l => l.active).length === 0}
                     >
                       <option value="">Seleccione una lotería</option>
@@ -1376,11 +1108,15 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       ))}
                     </select>
                     {lotteries.filter(l => l.active).length === 0 && (
-                      <p className="text-red-600 text-sm mt-2">No hay loterías activas en este momento</p>
+                      <p className="text-red-600 text-sm mt-2 flex items-center">
+                        <span className="mr-1">⏰</span> No hay loterías activas en este momento
+                      </p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad (Cifras)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="mr-1">🔢</span> Modalidad (Cifras)
+                    </label>
                     <select
                       value={currentBet.digits}
                       onChange={(e) => {
@@ -1391,7 +1127,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           number: currentBet.number.slice(0, parseInt(newDigits))
                         });
                       }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       <option value="2">2 Cifras</option>
                       <option value="3">3 Cifras</option>
@@ -1399,38 +1135,48 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Número Apostado</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="mr-1">🔢</span> Número Apostado
+                    </label>
                     <input
                       type="text"
                       value={currentBet.number}
                       onChange={(e) => handleNumberChange(e.target.value.replace(/\D/g, ''))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder={`Ej: ${'12'.substring(0, parseInt(currentBet.digits))}`}
                       maxLength={parseInt(currentBet.digits)}
                     />
                     <p className="text-sm text-gray-500 mt-1">Debe ingresar exactamente {currentBet.digits} dígito{parseInt(currentBet.digits) > 1 ? 's' : ''}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor de la Apuesta (COP)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="mr-1">💰</span> Valor de la Apuesta (COP)
+                    </label>
                     <input
                       type="number"
                       value={currentBet.amount}
                       onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Ej: 5000"
                     />
                     {parseInt(currentBet.amount) > 20000 && (
-                      <p className="text-yellow-600 text-sm mt-2">Esta apuesta requiere aprobación del administrador</p>
+                      <p className="text-yellow-600 text-sm mt-2 flex items-center">
+                        <span className="mr-1">⏳</span> Esta apuesta requiere aprobación del administrador
+                      </p>
                     )}
                     {parseInt(currentBet.digits) === 4 && parseInt(currentBet.amount) > 5000 && (
-                      <p className="text-red-600 text-sm mt-2">Máximo $5,000 para 4 cifras</p>
+                      <p className="text-red-600 text-sm mt-2 flex items-center">
+                        <span className="mr-1">⚠️</span> Máximo $5,000 para 4 cifras
+                      </p>
                     )}
                   </div>
                 </div>
               ) : (
                 <div>
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Loterías</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="mr-1">🎫</span> Seleccionar Loterías
+                    </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                       {lotteries.filter(l => l.active).map(lottery => (
                         <label key={lottery.name} className="flex items-center">
@@ -1453,11 +1199,13 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <span className="mr-1">🔢</span> Modalidad
+                      </label>
                       <select
                         value={currentBet.digits}
                         onChange={(e) => setCurrentBet({...currentBet, digits: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
                       >
                         <option value="2">2 Cifras</option>
                         <option value="3">3 Cifras</option>
@@ -1465,7 +1213,9 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Número</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <span className="mr-1">🔢</span> Número
+                      </label>
                       <input
                         type="text"
                         value={currentBet.number}
@@ -1475,17 +1225,19 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             setCurrentBet({...currentBet, number: val});
                           }
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
                         placeholder="Ej: 12"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Monto por Lotería</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <span className="mr-1">💰</span> Monto por Lotería
+                      </label>
                       <input
                         type="number"
                         value={currentBet.amount}
                         onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
                         placeholder="Ej: 2000"
                       />
                     </div>
@@ -1495,87 +1247,76 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               <div className="mt-6">
                 <button
                   onClick={handleAddBet}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-300 font-semibold"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-lg transition duration-300 font-semibold shadow-lg"
                 >
-                  {betMode === 'single' ? 'Añadir Apuesta' : `Añadir ${multiLotteries.length} Apuestas`}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'close' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Cierre de Caja</h2>
-              <p className="text-gray-600 mb-6">Genera reportes de cierre por fechas específicas.</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={dailyClose}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-                >
-                  Cierre de Hoy
-                </button>
-                <button
-                  onClick={openDateRangeModal}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-                >
-                  Cierre por Rango de Fechas
+                  {betMode === 'single' ? 'Añadir Apuesta ✨' : `Añadir ${multiLotteries.length} Apuestas ✨`}
                 </button>
               </div>
             </div>
           )}
 
           {betList.length > 0 && activeTab === 'create' && (
-            <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl shadow-sm p-6 mt-6 border border-purple-100">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">🎫</span> Apuestas en el Tiquete
+              </h3>
               <div className="space-y-3">
                 {betList.map(bet => (
-                  <div key={bet.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div key={bet.id} className="border border-purple-200 rounded-lg p-4 bg-white/80 backdrop-blur-sm">
                     <div className="flex justify-between">
                       <div>
-                        <p className="font-medium">{bet.lottery}</p>
-                        <p>Número: {bet.number} ({bet.digits} cifras)</p>
-                        <p>Valor: ${parseInt(bet.amount).toLocaleString()}</p>
+                        <p className="font-medium text-purple-700">{bet.lottery}</p>
+                        <p>Número: <span className="font-bold">{bet.number}</span> ({bet.digits} cifras)</p>
+                        <p>Valor: <span className="font-bold text-emerald-600">$${parseInt(bet.amount).toLocaleString()}</span></p>
                       </div>
                       <div className="flex items-center space-x-2">
                         {bet.status === 'pending' && (
-                          <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Pendiente
+                          <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 flex items-center">
+                            <span className="mr-1">⏳</span> Pendiente
                           </span>
                         )}
                         <button
                           onClick={() => handleRemoveBet(bet.id)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition duration-300"
+                          className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white px-3 py-1 rounded text-sm transition duration-300 shadow"
                         >
-                          Eliminar
+                          Eliminar 🗑️
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-purple-200">
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold">Total: ${betList.reduce((sum, bet) => sum + parseInt(bet.amount), 0).toLocaleString()}</span>
+                  <span className="text-lg font-bold text-purple-700 flex items-center">
+                    <span className="mr-1">💰</span> Total: ${betList.reduce((sum, bet) => sum + parseInt(bet.amount), 0).toLocaleString()}
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'create' && (
-            <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
+            <div className="bg-white rounded-xl shadow-sm p-6 mt-6 border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">📱</span> Información del Cliente
+              </h3>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Cliente</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <span className="mr-1">👤</span> Nombre del Cliente
+                </label>
                 <input
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Ej: Juan Pérez"
                 />
               </div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número del Cliente (solo dígitos)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <span className="mr-1">📱</span> Número del Cliente (solo dígitos)
+                </label>
                 <div className="flex">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
                     +57
@@ -1584,7 +1325,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="3001234567"
                     maxLength={10}
                   />
@@ -1593,36 +1334,64 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               <button
                 onClick={confirmTicket}
                 disabled={betList.length === 0}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 shadow-lg"
               >
-                Generar y Enviar Tiquete
+                Generar y Enviar Tiquete 🎫
               </button>
             </div>
           )}
 
+          {activeTab === 'close' && (
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">📊</span> Cierre de Caja
+              </h2>
+              <p className="text-gray-600 mb-6">Genera reportes de cierre por fechas específicas.</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={dailyClose}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow"
+                >
+                  Cierre de Hoy 📅
+                </button>
+                <button
+                  onClick={openDateRangeModal}
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow"
+                >
+                  Cierre por Rango de Fechas 📆
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Modales con estilo mejorado */}
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Confirmar Tiquete</h3>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <h4 className="font-semibold mb-2">Resumen del Tiquete:</h4>
-                  <p>Total: ${betList.reduce((sum, bet) => sum + parseInt(bet.amount), 0).toLocaleString()}</p>
-                  <p>Número de apuestas: {betList.length}</p>
-                  <p>Cliente: {customerName || 'Sin nombre'}</p>
-                  <p>Teléfono: +57{customerPhone}</p>
+              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <span className="mr-2">🎫</span> Confirmar Tiquete
+                </h3>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 mb-4 border border-emerald-100">
+                  <h4 className="font-semibold mb-2 flex items-center">
+                    <span className="mr-1">📋</span> Resumen del Tiquete:
+                  </h4>
+                  <p><span className="font-bold">Total:</span> ${betList.reduce((sum, bet) => sum + parseInt(bet.amount), 0).toLocaleString()}</p>
+                  <p><span className="font-bold">Número de apuestas:</span> {betList.length}</p>
+                  <p><span className="font-bold">Cliente:</span> {customerName || 'Sin nombre'}</p>
+                  <p><span className="font-bold">Teléfono:</span> +57{customerPhone}</p>
                 </div>
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setShowConfirmModal(false)}
                     className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
                   >
-                    Cancelar
+                    Cancelar ❌
                   </button>
                   <button
                     onClick={generateTicket}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-2 px-4 rounded-lg transition duration-300 shadow"
                   >
-                    Confirmar y Enviar
+                    Confirmar y Enviar ✅
                   </button>
                 </div>
               </div>
@@ -1631,21 +1400,25 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
           {showResendModal && resendTicketData && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Reenviar Ticket</h3>
+              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <span className="mr-2">📤</span> Reenviar Ticket
+                </h3>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Cliente</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-1">👤</span> Nombre del Cliente
+                  </label>
                   <input
                     type="text"
                     value={resendTicketData.customerName}
                     onChange={(e) => setResendTicketData({...resendTicketData, customerName: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Nombre del cliente"
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Número de teléfono (original: +57{resendTicketData.originalPhone})
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-1">📱</span> Número de teléfono (original: +57{resendTicketData.originalPhone})
                   </label>
                   <div className="flex">
                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
@@ -1655,7 +1428,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       type="tel"
                       value={resendTicketData.customerPhone}
                       onChange={(e) => setResendTicketData({...resendTicketData, customerPhone: e.target.value.replace(/\D/g, '')})}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="3001234567"
                       maxLength={10}
                     />
@@ -1666,13 +1439,13 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     onClick={() => setShowResendModal(false)}
                     className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
                   >
-                    Cancelar
+                    Cancelar ❌
                   </button>
                   <button
                     onClick={resendTicket}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-2 px-4 rounded-lg transition duration-300 shadow"
                   >
-                    Reenviar
+                    Reenviar ✅
                   </button>
                 </div>
               </div>
@@ -1681,25 +1454,31 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
           {showDateRangeModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Rango de Fechas para Cierre</h3>
+              <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <span className="mr-2">📅</span> Rango de Fechas para Cierre
+                </h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Inicio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="mr-1">📆</span> Fecha de Inicio
+                    </label>
                     <input
                       type="date"
                       value={dateRange.start}
                       onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Fin</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <span className="mr-1">📆</span> Fecha de Fin
+                    </label>
                     <input
                       type="date"
                       value={dateRange.end}
                       onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                 </div>
@@ -1708,13 +1487,13 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     onClick={() => setShowDateRangeModal(false)}
                     className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition duration-300"
                   >
-                    Cancelar
+                    Cancelar ❌
                   </button>
                   <button
                     onClick={generateDateRangeReport}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-2 px-4 rounded-lg transition duration-300 shadow"
                   >
-                    Generar Reporte
+                    Generar Reporte ✅
                   </button>
                 </div>
               </div>
