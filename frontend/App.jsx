@@ -13,12 +13,12 @@ const App = () => {
   const [currentBet, setCurrentBet] = useState({ lottery: '', digits: '2', number: '', amount: '' });
   const [betList, setBetList] = useState([]);
   const [customerPhone, setCustomerPhone] = useState('');
-  const [customerName, setCustomerName] = useState(''); // 🔥 Solo frontend
+  const [customerName, setCustomerName] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('create'); // 🔥 Por defecto: crear apuesta
+  const [activeTab, setActiveTab] = useState('create');
   const [payments, setPayments] = useState([]);
   const [showReportModal, setShowReportModal] = useState(false);
   const [currentReport, setCurrentReport] = useState(null);
@@ -31,10 +31,9 @@ const App = () => {
   const [resendTicketData, setResendTicketData] = useState(null);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [dateRange, setDateRange] = useState({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] });
-  const [betMode, setBetMode] = useState('single'); // 🔥 'single' o 'multiple'
+  const [betMode, setBetMode] = useState('single');
   const [multiLotteries, setMultiLotteries] = useState([]);
   const [todayTickets, setTodayTickets] = useState([]);
-  // URL del backend - REEMPLAZA CON TU URL REAL DE RENDER
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
   const lotterySchedule = [
@@ -146,7 +145,6 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // 🔥 Persistencia de sesión
   useEffect(() => {
     const saved = localStorage.getItem('miSuerteSession');
     if (saved) {
@@ -224,7 +222,6 @@ const App = () => {
       }
       setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
     } else {
-      // Modo múltiple
       if (multiLotteries.length === 0) {
         alert('Seleccione al menos una lotería');
         return;
@@ -320,7 +317,6 @@ const App = () => {
       customerPhone,
       timestamp: new Date()
     };
-    // Guardar en memoria con nombre
     const ticketWithCustomer = { ...ticket, customerName };
     setTodayTickets(prev => [...prev, ticketWithCustomer]);
     try {
@@ -551,7 +547,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     try {
       let url = `${BACKEND_URL}/api/tickets`;
       if (userRole === 'seller') {
-        // Solo cargar tickets del vendedor actual
         url += `?seller=${currentUser.username}`;
       }
       const response = await fetch(url);
@@ -560,7 +555,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         if (userRole === 'admin') {
           setTickets(ticketsData);
         }
-        // Para el vendedor, todayTickets se llena con todos sus tickets (ya filtrados por backend)
         const today = new Date().toISOString().split('T')[0];
         const todayTicketsFromDB = ticketsData
           .filter(t => new Date(t.timestamp).toISOString().split('T')[0] === today)
@@ -627,7 +621,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     alert('Ticket reenviado exitosamente');
   };
 
-  // Resto de funciones de admin (sin cambios)
   const toggleSellerStatus = async (sellerId, currentStatus) => {
     try {
       const seller = sellers.find(s => s._id === sellerId);
@@ -1203,8 +1196,8 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
   if (userRole === 'seller') {
     const today = new Date().toISOString().split('T')[0];
-    // ✅ Calculamos el total de ventas del día
-    const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+    // 🔥 Calcular total de ventas del día
+    const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -1245,7 +1238,8 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Ventas del Día ({todayTickets.length})
+                {/* 🔥 Mostrar total en el encabezado de la pestaña */}
+                Ventas del Día {todayTickets.length > 0 ? `($${totalSalesToday.toLocaleString()})` : `(0)`}
               </button>
               <button
                 onClick={() => setActiveTab('close')}
@@ -1259,10 +1253,59 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </button>
             </nav>
           </div>
+
+          {activeTab === 'sales' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
+              {todayTickets.length === 0 ? (
+                <p className="text-gray-500">No hay ventas registradas hoy.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lotería</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {todayTickets.map((ticket, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{ticket.ticketId}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.lottery || '-'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.number || '-'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-bold">${ticket.total.toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.customerName || 'Sin nombre'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">+57{ticket.customerPhone}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            {new Date(ticket.timestamp).toLocaleTimeString('es-CO')}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => openResendModal(ticket)}
+                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
+                            >
+                              Reenviar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
-              {/* Selector de modo */}
               <div className="mb-4 flex space-x-4">
                 <button
                   onClick={() => setBetMode('single')}
@@ -1427,60 +1470,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-          {activeTab === 'sales' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
-              {/* ✅ Mostramos el total acumulado */}
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-lg font-bold text-blue-800">
-                  Total vendido hoy: <span className="text-2xl text-green-600">${totalSalesToday.toLocaleString()}</span>
-                </p>
-              </div>
-              {todayTickets.length === 0 ? (
-                <p className="text-gray-500">No hay ventas registradas hoy.</p>
-              ) else (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lotería</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {todayTickets.map((ticket, index) => (
-                        <tr key={index}>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{ticket.ticketId}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.lottery || '-'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.number || '-'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-bold">${ticket.total.toLocaleString()}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.customerName || 'Sin nombre'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">+57{ticket.customerPhone}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            {new Date(ticket.timestamp).toLocaleTimeString('es-CO')}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            <button
-                              onClick={() => openResendModal(ticket)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
-                            >
-                              Reenviar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+
           {activeTab === 'close' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Cierre de Caja</h2>
@@ -1501,6 +1491,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
+
           {betList.length > 0 && activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
@@ -1537,6 +1528,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
+
           {activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
@@ -1575,6 +1567,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </button>
             </div>
           )}
+
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1603,6 +1596,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
+
           {showResendModal && resendTicketData && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1652,6 +1646,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
+
           {showDateRangeModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
