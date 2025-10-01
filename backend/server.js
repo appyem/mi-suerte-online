@@ -106,18 +106,16 @@ app.get('/api/tickets', async (req, res) => {
     const { date, startDate, endDate, seller } = req.query;
     let filter = {};
     
-    // Soporte para fecha única (comportamiento anterior)
     if (date) {
       const startDateSingle = new Date(date);
       const endDateSingle = new Date(date);
       endDateSingle.setDate(endDateSingle.getDate() + 1);
       filter.timestamp = { $gte: startDateSingle, $lt: endDateSingle };
     }
-    // Soporte para rango de fechas (nuevo)
     else if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      end.setDate(end.getDate() + 1); // Incluir todo el día de fin
+      end.setDate(end.getDate() + 1);
       filter.timestamp = { $gte: start, $lt: end };
     }
     
@@ -129,6 +127,39 @@ app.get('/api/tickets', async (req, res) => {
     res.json(tickets);
   } catch (error) {
     console.error('Error al obtener tickets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 🔴 NUEVA RUTA: Eliminar ticket (solo del mismo día y del mismo vendedor)
+app.delete('/api/tickets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { seller } = req.body;
+
+    if (!seller) {
+      return res.status(400).json({ error: 'Se requiere el nombre de usuario del vendedor' });
+    }
+
+    const ticket = await Ticket.findById(id);
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket no encontrado' });
+    }
+
+    if (ticket.seller !== seller) {
+      return res.status(403).json({ error: 'No tienes permiso para eliminar este ticket' });
+    }
+
+    const ticketDate = new Date(ticket.timestamp).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    if (ticketDate !== today) {
+      return res.status(400).json({ error: 'Solo se pueden eliminar tickets del día actual' });
+    }
+
+    await Ticket.findByIdAndDelete(id);
+    res.json({ message: 'Ticket eliminado exitosamente' });
+  } catch (error) {
+    console.error('Error al eliminar ticket:', error);
     res.status(500).json({ error: error.message });
   }
 });

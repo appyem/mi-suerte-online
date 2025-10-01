@@ -359,6 +359,32 @@ const App = () => {
     }
   };
 
+  // 🔴 NUEVA FUNCIÓN: Eliminar ticket
+  const deleteTicket = async (ticketId) => {
+    if (!window.confirm('¿Está seguro que desea eliminar este ticket? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller: currentUser.username }),
+      });
+
+      if (response.ok) {
+        setTodayTickets(todayTickets.filter(ticket => ticket._id !== ticketId));
+        alert('Ticket eliminado exitosamente');
+      } else {
+        const errorData = await response.json();
+        alert('Error: ' + (errorData.error || 'No se pudo eliminar el ticket'));
+      }
+    } catch (error) {
+      console.error('Error al eliminar ticket:', error);
+      alert('Error de conexión al intentar eliminar el ticket');
+    }
+  };
+
   const dailyClose = async () => {
     const today = new Date().toISOString().split('T')[0];
     try {
@@ -542,7 +568,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
-  // ✅ FUNCIÓN CORREGIDA: ahora filtra por vendedor en el backend
   const loadTickets = async () => {
     try {
       let url = `${BACKEND_URL}/api/tickets`;
@@ -1196,7 +1221,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
   if (userRole === 'seller') {
     const today = new Date().toISOString().split('T')[0];
-    // 🔥 Calcular total de ventas del día
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
 
     return (
@@ -1238,7 +1262,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {/* 🔥 Mostrar total en el encabezado de la pestaña */}
                 Ventas del Día {todayTickets.length > 0 ? `($${totalSalesToday.toLocaleString()})` : `(0)`}
               </button>
               <button
@@ -1287,12 +1310,21 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             {new Date(ticket.timestamp).toLocaleTimeString('es-CO')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            <button
-                              onClick={() => openResendModal(ticket)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
-                            >
-                              Reenviar
-                            </button>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => openResendModal(ticket)}
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
+                              >
+                                Reenviar
+                              </button>
+                              {/* 🔴 Botón de eliminar */}
+                              <button
+                                onClick={() => deleteTicket(ticket._id)}
+                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
