@@ -34,7 +34,6 @@ const App = () => {
   const [betMode, setBetMode] = useState('single'); // 🔥 'single' o 'multiple'
   const [multiLotteries, setMultiLotteries] = useState([]);
   const [todayTickets, setTodayTickets] = useState([]);
-
   // URL del backend - REEMPLAZA CON TU URL REAL DE RENDER
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
@@ -245,7 +244,6 @@ const App = () => {
         alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
         return;
       }
-
       const newBets = multiLotteries.map(lotteryName => ({
         lottery: lotteryName,
         digits,
@@ -253,7 +251,6 @@ const App = () => {
         amount,
         id: Date.now() + Math.random()
       }));
-
       if (betAmount > 20000) {
         const pendingBets = newBets.map(bet => ({
           ...bet,
@@ -266,7 +263,6 @@ const App = () => {
       } else {
         setBetList([...betList, ...newBets]);
       }
-
       setMultiLotteries([]);
       setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
     }
@@ -324,11 +320,9 @@ const App = () => {
       customerPhone,
       timestamp: new Date()
     };
-
     // Guardar en memoria con nombre
     const ticketWithCustomer = { ...ticket, customerName };
     setTodayTickets(prev => [...prev, ticketWithCustomer]);
-
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets`, {
         method: 'POST',
@@ -343,19 +337,23 @@ const App = () => {
         }),
       });
       if (!response.ok) throw new Error('Error al guardar el ticket');
-
-      let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀\n`;
-      message += `Tiquete: ${ticket.ticketId}\n`;
-      message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
-      message += `Vendedor: ${ticket.seller}\n`;
-      message += `Total: $${ticket.total.toLocaleString()}\n`;
-      message += `Detalles de apuestas:\n`;
+      let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀
+`;
+      message += `Tiquete: ${ticket.ticketId}
+`;
+      message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}
+`;
+      message += `Vendedor: ${ticket.seller}
+`;
+      message += `Total: $${ticket.total.toLocaleString()}
+`;
+      message += `Detalles de apuestas:
+`;
       ticket.bets.forEach((bet, index) => {
-        message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
+        message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}
+`;
       });
-
       openWhatsApp(customerPhone, message);
-
       setBetList([]);
       setCustomerPhone('');
       setCustomerName('');
@@ -391,23 +389,33 @@ const App = () => {
         alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos)');
         return;
       }
-
-      let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊\n`;
-      reportMessage += `Fecha: ${new Date().toLocaleDateString('es-CO')}\n`;
-      reportMessage += `Vendedor: ${currentUser.username}\n`;
-      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
-      reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
-      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}\n`;
-      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n`;
-      reportMessage += `Detalles de Ventas:\n`;
+      let reportMessage = `REPORTE DIARIO - Mi Suerte Online 📊
+`;
+      reportMessage += `Fecha: ${new Date().toLocaleDateString('es-CO')}
+`;
+      reportMessage += `Vendedor: ${currentUser.username}
+`;
+      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}
+`;
+      reportMessage += `Número de Tiquetes: ${ticketCount}
+`;
+      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}
+`;
+      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}
+`;
+      reportMessage += `Detalles de Ventas:
+`;
       todayTickets.forEach((ticket, index) => {
-        reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
-        reportMessage += `Total: $${ticket.total.toLocaleString()}\n`;
+        reportMessage += `
+Tiquete #${index + 1}: ${ticket.ticketId}
+`;
+        reportMessage += `Total: $${ticket.total.toLocaleString()}
+`;
         ticket.bets.forEach((bet, betIndex) => {
-          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
+          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}
+`;
         });
       });
-
       try {
         await fetch(`${BACKEND_URL}/api/payments`, {
           method: 'POST',
@@ -425,7 +433,6 @@ const App = () => {
       } catch (paymentError) {
         console.warn('No se pudo registrar el pago:', paymentError);
       }
-
       openWhatsApp(reportPhone, reportMessage);
       alert('Reporte diario enviado exitosamente');
     } catch (error) {
@@ -473,24 +480,35 @@ const App = () => {
         alert('Por favor ingrese un número de teléfono válido (mínimo 10 dígitos)');
         return;
       }
-
-      let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊\n`;
-      reportMessage += `Rango de Fechas: ${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}\n`;
-      reportMessage += `Vendedor: ${currentUser.username}\n`;
-      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}\n`;
-      reportMessage += `Número de Tiquetes: ${ticketCount}\n`;
-      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}\n`;
-      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}\n`;
-      reportMessage += `Detalles de Ventas:\n`;
+      let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊
+`;
+      reportMessage += `Rango de Fechas: ${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}
+`;
+      reportMessage += `Vendedor: ${currentUser.username}
+`;
+      reportMessage += `Total Ventas: $${totalSales.toLocaleString()}
+`;
+      reportMessage += `Número de Tiquetes: ${ticketCount}
+`;
+      reportMessage += `Comisión (${commissionRate}%): $${commissionAmount.toLocaleString()}
+`;
+      reportMessage += `Monto a Pagar: $${netAmount.toLocaleString()}
+`;
+      reportMessage += `Detalles de Ventas:
+`;
       ticketsInRange.forEach((ticket, index) => {
-        reportMessage += `\nTiquete #${index + 1}: ${ticket.ticketId}\n`;
-        reportMessage += `Fecha: ${new Date(ticket.timestamp).toLocaleDateString('es-CO')}\n`;
-        reportMessage += `Total: $${ticket.total.toLocaleString()}\n`;
+        reportMessage += `
+Tiquete #${index + 1}: ${ticket.ticketId}
+`;
+        reportMessage += `Fecha: ${new Date(ticket.timestamp).toLocaleDateString('es-CO')}
+`;
+        reportMessage += `Total: $${ticket.total.toLocaleString()}
+`;
         ticket.bets.forEach((bet, betIndex) => {
-          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
+          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}
+`;
         });
       });
-
       openWhatsApp(reportPhone, reportMessage);
       alert(`Reporte de cierre generado exitosamente para el rango: ${start} al ${end}`);
       setShowDateRangeModal(false);
@@ -528,12 +546,21 @@ const App = () => {
     }
   };
 
+  // ✅ FUNCIÓN CORREGIDA: ahora filtra por vendedor en el backend
   const loadTickets = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets`);
+      let url = `${BACKEND_URL}/api/tickets`;
+      if (userRole === 'seller') {
+        // Solo cargar tickets del vendedor actual
+        url += `?seller=${currentUser.username}`;
+      }
+      const response = await fetch(url);
       if (response.ok) {
         const ticketsData = await response.json();
-        setTickets(ticketsData);
+        if (userRole === 'admin') {
+          setTickets(ticketsData);
+        }
+        // Para el vendedor, todayTickets se llena con todos sus tickets (ya filtrados por backend)
         const today = new Date().toISOString().split('T')[0];
         const todayTicketsFromDB = ticketsData
           .filter(t => new Date(t.timestamp).toISOString().split('T')[0] === today)
@@ -565,7 +592,7 @@ const App = () => {
     } else if (userRole === 'seller') {
       loadTickets();
     }
-  }, [userRole]);
+  }, [userRole, currentUser]);
 
   const openResendModal = (ticket) => {
     setResendTicketData({
@@ -579,14 +606,21 @@ const App = () => {
   const resendTicket = () => {
     if (!resendTicketData) return;
     const { customerName: name, customerPhone: phone, bets, total, ticketId, seller, timestamp } = resendTicketData;
-    let message = `¡Gracias por jugar con Mi Suerte Online${name ? `, ${name}` : ''}! 🍀\n`;
-    message += `Tiquete: ${ticketId}\n`;
-    message += `Fecha: ${new Date(timestamp).toLocaleString()}\n`;
-    message += `Vendedor: ${seller}\n`;
-    message += `Total: $${total.toLocaleString()}\n`;
-    message += `Detalles de apuestas:\n`;
+    let message = `¡Gracias por jugar con Mi Suerte Online${name ? `, ${name}` : ''}! 🍀
+`;
+    message += `Tiquete: ${ticketId}
+`;
+    message += `Fecha: ${new Date(timestamp).toLocaleString()}
+`;
+    message += `Vendedor: ${seller}
+`;
+    message += `Total: $${total.toLocaleString()}
+`;
+    message += `Detalles de apuestas:
+`;
     bets.forEach((bet, index) => {
-      message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
+      message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}
+`;
     });
     openWhatsApp(phone, message);
     setShowResendModal(false);
@@ -740,9 +774,17 @@ const App = () => {
     if (!currentReport) return;
     let message = '';
     if (reportType === 'sales') {
-      message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\nVENTAS TOTALES: $${currentReport.totalSales}\nTIQUETES: ${currentReport.ticketCount}\n`;
+      message = `*${currentReport.title}*
+Período: ${currentReport.period}
+VENTAS TOTALES: $${currentReport.totalSales}
+TIQUETES: ${currentReport.ticketCount}
+`;
     } else if (reportType === 'payments') {
-      message = `*${currentReport.title}*\nPeríodo: ${currentReport.period}\nTOTAL PAGADO: $${currentReport.totalPaid}\nCOMISIÓN TOTAL: $${currentReport.totalCommission}\n`;
+      message = `*${currentReport.title}*
+Período: ${currentReport.period}
+TOTAL PAGADO: $${currentReport.totalPaid}
+COMISIÓN TOTAL: $${currentReport.totalCommission}
+`;
     }
     const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     const waLink = document.createElement('a');
@@ -847,7 +889,6 @@ const App = () => {
               ))}
             </nav>
           </div>
-
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -880,7 +921,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {activeTab === 'reports' && (
             <div className="space-y-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -930,7 +970,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {activeTab === 'sellers' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
@@ -997,7 +1036,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {activeTab === 'payments' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Pagos a Vendedores</h2>
@@ -1025,7 +1063,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {activeTab === 'lotteries' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Gestión de Loterías (Hoy)</h2>
@@ -1058,7 +1095,6 @@ const App = () => {
             </div>
           )}
         </div>
-
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -1096,7 +1132,6 @@ const App = () => {
             </div>
           </div>
         )}
-
         {showAddSellerModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-md w-full">
@@ -1168,7 +1203,6 @@ const App = () => {
 
   if (userRole === 'seller') {
     const today = new Date().toISOString().split('T')[0];
-
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
@@ -1222,11 +1256,9 @@ const App = () => {
               </button>
             </nav>
           </div>
-
           {activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
-              
               {/* Selector de modo */}
               <div className="mb-4 flex space-x-4">
                 <button
@@ -1250,7 +1282,6 @@ const App = () => {
                   Apuesta Múltiple
                 </button>
               </div>
-
               {betMode === 'single' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -1383,7 +1414,6 @@ const App = () => {
                   </div>
                 </div>
               )}
-
               <div className="mt-6">
                 <button
                   onClick={handleAddBet}
@@ -1394,7 +1424,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {activeTab === 'sales' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
@@ -1443,7 +1472,6 @@ const App = () => {
               )}
             </div>
           )}
-
           {activeTab === 'close' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Cierre de Caja</h2>
@@ -1464,7 +1492,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {betList.length > 0 && activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
@@ -1501,7 +1528,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
@@ -1540,7 +1566,6 @@ const App = () => {
               </button>
             </div>
           )}
-
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1569,7 +1594,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {showResendModal && resendTicketData && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1619,7 +1643,6 @@ const App = () => {
               </div>
             </div>
           )}
-
           {showDateRangeModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
