@@ -1203,6 +1203,9 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
   if (userRole === 'seller') {
     const today = new Date().toISOString().split('T')[0];
+    // ✅ Calculamos el total de ventas del día
+    const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
@@ -1427,9 +1430,15 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {activeTab === 'sales' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
+              {/* ✅ Mostramos el total acumulado */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-lg font-bold text-blue-800">
+                  Total vendido hoy: <span className="text-2xl text-green-600">${totalSalesToday.toLocaleString()}</span>
+                </p>
+              </div>
               {todayTickets.length === 0 ? (
                 <p className="text-gray-500">No hay ventas registradas hoy.</p>
-              ) : (
+              ) else (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
