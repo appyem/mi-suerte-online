@@ -17,12 +17,12 @@ const App = () => {
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
   
-  // 🔴 Corrección: usar fecha local
+  // 🔴 Corrección 1: Función para fecha local (Colombia)
   const getLocalDate = () => {
-    return new Date().toLocaleDateString('sv-SE'); // Formato YYYY-MM-DD en hora local
+    return new Date().toLocaleDateString('sv-SE');
   };
   
-  const reportDate = getLocalDate(); // Inicializar con fecha local
+  const reportDate = getLocalDate();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
   const [payments, setPayments] = useState([]);
@@ -366,7 +366,7 @@ const App = () => {
   };
 
   const dailyClose = async () => {
-    const today = getLocalDate(); // 🔴 Corregido
+    const today = getLocalDate(); // 🔴 Usa fecha local
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
@@ -444,7 +444,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   const openDateRangeModal = () => {
-    const today = getLocalDate(); // 🔴 Corregido
+    const today = getLocalDate(); // 🔴 Usa fecha local
     setDateRange({ start: today, end: today });
     setShowDateRangeModal(true);
   };
@@ -548,13 +548,20 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
+  // 🔴 Corrección 2: Cargar SOLO los tickets del vendedor logueado
   const loadTickets = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets`);
+      let url = `${BACKEND_URL}/api/tickets`;
+      if (userRole === 'seller' && currentUser) {
+        url += `?seller=${currentUser.username}`;
+      }
+      const response = await fetch(url);
       if (response.ok) {
         const ticketsData = await response.json();
-        setTickets(ticketsData);
-        const today = getLocalDate(); // 🔴 Corregido
+        if (userRole === 'admin') {
+          setTickets(ticketsData);
+        }
+        const today = getLocalDate(); // Usa fecha local
         const todayTicketsFromDB = ticketsData
           .filter(t => new Date(t.timestamp).toLocaleDateString('sv-SE') === today)
           .map(t => ({ ...t, customerName: '' }));
@@ -585,7 +592,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     } else if (userRole === 'seller') {
       loadTickets();
     }
-  }, [userRole]);
+  }, [userRole, currentUser]);
 
   const openResendModal = (ticket) => {
     setResendTicketData({
@@ -732,7 +739,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     return Object.values(paymentSummary);
   };
 
-  const generateDetailedReport = async (type, date = getLocalDate()) => { // 🔴 Corregido
+  const generateDetailedReport = async (type, date = getLocalDate()) => {
     if (!type) {
       alert('Seleccione un tipo de reporte');
       return;
@@ -756,7 +763,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     const element = document.createElement("a");
     const file = new Blob([JSON.stringify(currentReport, null, 2)], {type: 'application/json'});
     element.href = URL.createObjectURL(file);
-    element.download = `reporte_${reportType}_${getLocalDate()}.json`; // 🔴 Corregido
+    element.download = `reporte_${reportType}_${getLocalDate()}.json`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -887,7 +894,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-green-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate() // 🔴 Corregido
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate()
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -895,7 +902,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-blue-600">
                   {tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate() // 🔴 Corregido
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate()
                   ).length}
                 </p>
               </div>
@@ -907,7 +914,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-purple-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate() // 🔴 Corregido
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate()
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -1194,7 +1201,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
   }
 
   if (userRole === 'seller') {
-    const today = getLocalDate(); // 🔴 Corregido
+    const today = getLocalDate(); // 🔴 Usa fecha local
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
 
     return (
