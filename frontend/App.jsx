@@ -16,7 +16,13 @@ const App = () => {
   const [customerName, setCustomerName] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // 🔴 Corrección: usar fecha local
+  const getLocalDate = () => {
+    return new Date().toLocaleDateString('sv-SE'); // Formato YYYY-MM-DD en hora local
+  };
+  
+  const reportDate = getLocalDate(); // Inicializar con fecha local
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
   const [payments, setPayments] = useState([]);
@@ -30,7 +36,7 @@ const App = () => {
   const [showResendModal, setShowResendModal] = useState(false);
   const [resendTicketData, setResendTicketData] = useState(null);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] });
+  const [dateRange, setDateRange] = useState({ start: getLocalDate(), end: getLocalDate() });
   const [betMode, setBetMode] = useState('single');
   const [multiLotteries, setMultiLotteries] = useState([]);
   const [todayTickets, setTodayTickets] = useState([]);
@@ -359,34 +365,8 @@ const App = () => {
     }
   };
 
-  // 🔴 NUEVA FUNCIÓN: Eliminar ticket
-  const deleteTicket = async (ticketId) => {
-    if (!window.confirm('¿Está seguro que desea eliminar este ticket? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets/${ticketId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seller: currentUser.username }),
-      });
-
-      if (response.ok) {
-        setTodayTickets(todayTickets.filter(ticket => ticket._id !== ticketId));
-        alert('Ticket eliminado exitosamente');
-      } else {
-        const errorData = await response.json();
-        alert('Error: ' + (errorData.error || 'No se pudo eliminar el ticket'));
-      }
-    } catch (error) {
-      console.error('Error al eliminar ticket:', error);
-      alert('Error de conexión al intentar eliminar el ticket');
-    }
-  };
-
   const dailyClose = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDate(); // 🔴 Corregido
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
@@ -464,7 +444,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   const openDateRangeModal = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDate(); // 🔴 Corregido
     setDateRange({ start: today, end: today });
     setShowDateRangeModal(true);
   };
@@ -570,19 +550,13 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 
   const loadTickets = async () => {
     try {
-      let url = `${BACKEND_URL}/api/tickets`;
-      if (userRole === 'seller') {
-        url += `?seller=${currentUser.username}`;
-      }
-      const response = await fetch(url);
+      const response = await fetch(`${BACKEND_URL}/api/tickets`);
       if (response.ok) {
         const ticketsData = await response.json();
-        if (userRole === 'admin') {
-          setTickets(ticketsData);
-        }
-        const today = new Date().toISOString().split('T')[0];
+        setTickets(ticketsData);
+        const today = getLocalDate(); // 🔴 Corregido
         const todayTicketsFromDB = ticketsData
-          .filter(t => new Date(t.timestamp).toISOString().split('T')[0] === today)
+          .filter(t => new Date(t.timestamp).toLocaleDateString('sv-SE') === today)
           .map(t => ({ ...t, customerName: '' }));
         setTodayTickets(todayTicketsFromDB);
       }
@@ -611,7 +585,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     } else if (userRole === 'seller') {
       loadTickets();
     }
-  }, [userRole, currentUser]);
+  }, [userRole]);
 
   const openResendModal = (ticket) => {
     setResendTicketData({
@@ -758,7 +732,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     return Object.values(paymentSummary);
   };
 
-  const generateDetailedReport = async (type, date = new Date().toISOString().split('T')[0]) => {
+  const generateDetailedReport = async (type, date = getLocalDate()) => { // 🔴 Corregido
     if (!type) {
       alert('Seleccione un tipo de reporte');
       return;
@@ -782,7 +756,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     const element = document.createElement("a");
     const file = new Blob([JSON.stringify(currentReport, null, 2)], {type: 'application/json'});
     element.href = URL.createObjectURL(file);
-    element.download = `reporte_${reportType}_${new Date().toISOString().split('T')[0]}.json`;
+    element.download = `reporte_${reportType}_${getLocalDate()}.json`; // 🔴 Corregido
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -913,7 +887,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-green-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate() // 🔴 Corregido
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -921,7 +895,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-blue-600">
                   {tickets.filter(t => 
-                    new Date(t.timestamp).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate() // 🔴 Corregido
                   ).length}
                 </p>
               </div>
@@ -933,7 +907,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-purple-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate() // 🔴 Corregido
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -1220,7 +1194,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
   }
 
   if (userRole === 'seller') {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDate(); // 🔴 Corregido
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
 
     return (
@@ -1317,7 +1291,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                               >
                                 Reenviar
                               </button>
-                              {/* 🔴 Botón de eliminar */}
                               <button
                                 onClick={() => deleteTicket(ticket._id)}
                                 className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
