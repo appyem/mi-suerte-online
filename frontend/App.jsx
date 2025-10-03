@@ -17,7 +17,6 @@ const App = () => {
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
   
-  // 🔴 Corrección 1: Función para fecha local (Colombia)
   const getLocalDate = () => {
     return new Date().toLocaleDateString('sv-SE');
   };
@@ -365,19 +364,26 @@ const App = () => {
     }
   };
 
+  // 🔴 Corrección: Cargar vendedores dentro de dailyClose
   const dailyClose = async () => {
-    const today = getLocalDate(); // 🔴 Usa fecha local
+    const today = getLocalDate();
     try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
-      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-      const todayTickets = await response.json();
+      // 🔴 Cargar vendedores actualizados
+      const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
+      if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
+      const sellersData = await sellersResponse.json();
+
+      const ticketsResponse = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
+      if (!ticketsResponse.ok) throw new Error(`Error HTTP: ${ticketsResponse.status}`);
+      const todayTickets = await ticketsResponse.json();
       const totalSales = todayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = todayTickets.length;
       if (ticketCount === 0) {
         alert('No hay ventas para el día de hoy');
         return;
       }
-      const seller = sellers.find(s => s.username === currentUser.username);
+      // 🔴 Buscar en sellersData (no en el estado que podría estar desactualizado)
+      const seller = sellersData.find(s => s.username === currentUser.username);
       const commissionRate = seller ? seller.commission : 10;
       const commissionAmount = Math.round(totalSales * commissionRate / 100);
       const netAmount = totalSales - commissionAmount;
@@ -444,11 +450,12 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   const openDateRangeModal = () => {
-    const today = getLocalDate(); // 🔴 Usa fecha local
+    const today = getLocalDate();
     setDateRange({ start: today, end: today });
     setShowDateRangeModal(true);
   };
 
+  // 🔴 Corrección: Cargar vendedores dentro de generateDateRangeReport
   const generateDateRangeReport = async () => {
     const { start, end } = dateRange;
     if (!start || !end) {
@@ -462,16 +469,22 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       return;
     }
     try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets?startDate=${start}&endDate=${end}&seller=${currentUser.username}`);
-      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-      const ticketsInRange = await response.json();
+      // 🔴 Cargar vendedores actualizados
+      const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
+      if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
+      const sellersData = await sellersResponse.json();
+
+      const ticketsResponse = await fetch(`${BACKEND_URL}/api/tickets?startDate=${start}&endDate=${end}&seller=${currentUser.username}`);
+      if (!ticketsResponse.ok) throw new Error(`Error HTTP: ${ticketsResponse.status}`);
+      const ticketsInRange = await ticketsResponse.json();
       const totalSales = ticketsInRange.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = ticketsInRange.length;
       if (ticketCount === 0) {
         alert(`No hay ventas en el rango de fechas: ${start} al ${end}`);
         return;
       }
-      const seller = sellers.find(s => s.username === currentUser.username);
+      // 🔴 Buscar en sellersData
+      const seller = sellersData.find(s => s.username === currentUser.username);
       const commissionRate = seller ? seller.commission : 10;
       const commissionAmount = Math.round(totalSales * commissionRate / 100);
       const netAmount = totalSales - commissionAmount;
@@ -548,7 +561,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
-  // 🔴 Corrección 2: Cargar SOLO los tickets del vendedor logueado
   const loadTickets = async () => {
     try {
       let url = `${BACKEND_URL}/api/tickets`;
@@ -561,7 +573,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         if (userRole === 'admin') {
           setTickets(ticketsData);
         }
-        const today = getLocalDate(); // Usa fecha local
+        const today = getLocalDate();
         const todayTicketsFromDB = ticketsData
           .filter(t => new Date(t.timestamp).toLocaleDateString('sv-SE') === today)
           .map(t => ({ ...t, customerName: '' }));
@@ -1201,7 +1213,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
   }
 
   if (userRole === 'seller') {
-    const today = getLocalDate(); // 🔴 Usa fecha local
+    const today = getLocalDate();
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
 
     return (
