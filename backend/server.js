@@ -15,11 +15,11 @@ mongoose.connect(MONGODB_URI, {
   useUnifiedTopology: true,
 });
 
-// 🔴 Función para convertir una fecha YYYY-MM-DD a la medianoche en Colombia (UTC-5)
-const parseDateToColombiaStart = (dateStr) => {
+// 🔴 Función para convertir YYYY-MM-DD a la medianoche en Colombia (UTC-5)
+const parseDateToColombia = (dateStr) => {
   if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-').map(Number);
-  // En UTC, la medianoche en Colombia (UTC-5) es 05:00 UTC
+  // La medianoche en Colombia (UTC-5) corresponde a 05:00 UTC
   return new Date(Date.UTC(year, month - 1, day, 5, 0, 0));
 };
 
@@ -108,25 +108,32 @@ app.post('/api/tickets', async (req, res) => {
   }
 });
 
-// Ruta para obtener tickets con soporte de rango de fechas
+// 🔴 RUTA CORREGIDA: obtener tickets con soporte de rango de fechas (ahora compatible con zona horaria de Colombia)
 app.get('/api/tickets', async (req, res) => {
   try {
     const { date, startDate, endDate, seller } = req.query;
     let filter = {};
     
     if (date) {
-      // 🔴 Usar la función corregida para Colombia
-      const start = parseDateToColombiaStart(date);
+      const start = parseDateToColombia(date);
+      if (!start) {
+        return res.status(400).json({ error: 'Formato de fecha inválido' });
+      }
       const end = new Date(start);
       end.setDate(end.getDate() + 1);
       filter.timestamp = { $gte: start, $lt: end };
     }
     else if (startDate && endDate) {
-      // Para rango, asumimos que las fechas ya están en formato local
-      const start = parseDateToColombiaStart(startDate);
-      const end = parseDateToColombiaStart(end);
+      const start = parseDateToColombia(startDate);
+      const end = parseDateToColombia(endDate);
+      
+      if (!start || !end) {
+        return res.status(400).json({ error: 'Fechas inválidas' });
+      }
+
       const endPlusOne = new Date(end);
       endPlusOne.setDate(endPlusOne.getDate() + 1);
+      
       filter.timestamp = { $gte: start, $lt: endPlusOne };
     }
     
@@ -138,7 +145,7 @@ app.get('/api/tickets', async (req, res) => {
     res.json(tickets);
   } catch (error) {
     console.error('Error al obtener tickets:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
@@ -162,7 +169,7 @@ app.delete('/api/tickets/:id', async (req, res) => {
     }
 
     // Verificar que sea del mismo día (usando la misma lógica de Colombia)
-    const todayStart = parseDateToColombiaStart(new Date().toLocaleDateString('sv-SE'));
+    const todayStart = parseDateToColombia(new Date().toLocaleDateString('sv-SE'));
     const todayEnd = new Date(todayStart);
     todayEnd.setDate(todayEnd.getDate() + 1);
     
@@ -276,11 +283,12 @@ app.get('/api/reports', async (req, res) => {
     
     let filter = {};
     if (date) {
-      // 🔴 Usar la función corregida para Colombia
-      const start = parseDateToColombiaStart(date);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
-      filter.timestamp = { $gte: start, $lt: end };
+      const start = parseDateToColombia(date);
+      if (start) {
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+        filter.timestamp = { $gte: start, $lt: end };
+      }
     }
     
     if (seller) {
