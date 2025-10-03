@@ -39,6 +39,8 @@ const App = () => {
   const [betMode, setBetMode] = useState('single');
   const [multiLotteries, setMultiLotteries] = useState([]);
   const [todayTickets, setTodayTickets] = useState([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false); // 🔴 Nuevo estado
+  const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' }); // 🔴 Nuevo estado
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
   const lotterySchedule = [
@@ -364,11 +366,26 @@ const App = () => {
     }
   };
 
-  // 🔴 Corrección: Cargar vendedores dentro de dailyClose
+  // 🔴 Nueva función: Enviar reporte desde el modal
+  const sendReport = () => {
+    openWhatsApp(previewReportData.phone, previewReportData.message);
+    try {
+      fetch(`${BACKEND_URL}/api/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(previewReportData.paymentData),
+      });
+    } catch (paymentError) {
+      console.warn('No se pudo registrar el pago:', paymentError);
+    }
+    setShowPreviewModal(false);
+    alert('Reporte enviado exitosamente');
+  };
+
+  // 🔴 Corregido: dailyClose ahora muestra vista previa
   const dailyClose = async () => {
     const today = getLocalDate();
     try {
-      // 🔴 Cargar vendedores actualizados
       const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
       if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
       const sellersData = await sellersResponse.json();
@@ -382,7 +399,6 @@ const App = () => {
         alert('No hay ventas para el día de hoy');
         return;
       }
-      // 🔴 Buscar en sellersData (no en el estado que podría estar desactualizado)
       const seller = sellersData.find(s => s.username === currentUser.username);
       const commissionRate = seller ? seller.commission : 10;
       const commissionAmount = Math.round(totalSales * commissionRate / 100);
@@ -424,25 +440,22 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 `;
         });
       });
-      try {
-        await fetch(`${BACKEND_URL}/api/payments`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            seller: currentUser.username,
-            date: new Date().toLocaleDateString('es-CO'),
-            totalSales,
-            commissionRate,
-            commissionAmount,
-            netAmount,
-            ticketCount
-          }),
-        });
-      } catch (paymentError) {
-        console.warn('No se pudo registrar el pago:', paymentError);
-      }
-      openWhatsApp(reportPhone, reportMessage);
-      alert('Reporte diario enviado exitosamente');
+
+      // 🔴 Guardar datos para el modal
+      setPreviewReportData({
+        message: reportMessage,
+        phone: cleanPhone,
+        paymentData: {
+          seller: currentUser.username,
+          date: new Date().toLocaleDateString('es-CO'),
+          totalSales,
+          commissionRate,
+          commissionAmount,
+          netAmount,
+          ticketCount
+        }
+      });
+      setShowPreviewModal(true); // 🔴 Mostrar vista previa
     } catch (error) {
       console.error('Error en cierre diario:', error);
       alert(`Error al generar el reporte diario: ${error.message || 'Verifique la conexión'}`);
@@ -455,7 +468,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     setShowDateRangeModal(true);
   };
 
-  // 🔴 Corrección: Cargar vendedores dentro de generateDateRangeReport
+  // 🔴 Corregido: generateDateRangeReport ahora muestra vista previa
   const generateDateRangeReport = async () => {
     const { start, end } = dateRange;
     if (!start || !end) {
@@ -469,7 +482,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       return;
     }
     try {
-      // 🔴 Cargar vendedores actualizados
       const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
       if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
       const sellersData = await sellersResponse.json();
@@ -483,7 +495,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         alert(`No hay ventas en el rango de fechas: ${start} al ${end}`);
         return;
       }
-      // 🔴 Buscar en sellersData
       const seller = sellersData.find(s => s.username === currentUser.username);
       const commissionRate = seller ? seller.commission : 10;
       const commissionAmount = Math.round(totalSales * commissionRate / 100);
@@ -524,8 +535,22 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 `;
         });
       });
-      openWhatsApp(reportPhone, reportMessage);
-      alert(`Reporte de cierre generado exitosamente para el rango: ${start} al ${end}`);
+
+      // 🔴 Guardar datos para el modal
+      setPreviewReportData({
+        message: reportMessage,
+        phone: cleanPhone,
+        paymentData: {
+          seller: currentUser.username,
+          date: `${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}`,
+          totalSales,
+          commissionRate,
+          commissionAmount,
+          netAmount,
+          ticketCount
+        }
+      });
+      setShowPreviewModal(true); // 🔴 Mostrar vista previa
       setShowDateRangeModal(false);
     } catch (error) {
       console.error('Error en cierre por rango de fechas:', error);
@@ -1708,6 +1733,39 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   >
                     Generar Reporte
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 🔴 Modal de vista previa de reporte */}
+          {showPreviewModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-xl font-bold text-gray-900">Vista Previa del Reporte</h3>
+                  <p className="text-gray-600">Revise el reporte antes de enviarlo por WhatsApp</p>
+                </div>
+                <div className="p-6">
+                  <pre className="bg-gray-100 p-4 rounded text-sm overflow-auto whitespace-pre-wrap">
+                    {previewReportData.message}
+                  </pre>
+                </div>
+                <div className="p-6 border-t border-gray-200">
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={sendReport}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300"
+                    >
+                      Enviar por WhatsApp
+                    </button>
+                    <button
+                      onClick={() => setShowPreviewModal(false)}
+                      className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition duration-300"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
