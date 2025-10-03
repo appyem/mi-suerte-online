@@ -15,6 +15,14 @@ mongoose.connect(MONGODB_URI, {
   useUnifiedTopology: true,
 });
 
+// 🔴 Función para convertir una fecha YYYY-MM-DD a la medianoche en Colombia (UTC-5)
+const parseDateToColombiaStart = (dateStr) => {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  // En UTC, la medianoche en Colombia (UTC-5) es 05:00 UTC
+  return new Date(Date.UTC(year, month - 1, day, 5, 0, 0));
+};
+
 // Esquema de Ticket
 const ticketSchema = new mongoose.Schema({
   ticketId: String,
@@ -107,16 +115,19 @@ app.get('/api/tickets', async (req, res) => {
     let filter = {};
     
     if (date) {
-      const startDateSingle = new Date(date);
-      const endDateSingle = new Date(date);
-      endDateSingle.setDate(endDateSingle.getDate() + 1);
-      filter.timestamp = { $gte: startDateSingle, $lt: endDateSingle };
-    }
-    else if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      // 🔴 Usar la función corregida para Colombia
+      const start = parseDateToColombiaStart(date);
+      const end = new Date(start);
       end.setDate(end.getDate() + 1);
       filter.timestamp = { $gte: start, $lt: end };
+    }
+    else if (startDate && endDate) {
+      // Para rango, asumimos que las fechas ya están en formato local
+      const start = parseDateToColombiaStart(startDate);
+      const end = parseDateToColombiaStart(end);
+      const endPlusOne = new Date(end);
+      endPlusOne.setDate(endPlusOne.getDate() + 1);
+      filter.timestamp = { $gte: start, $lt: endPlusOne };
     }
     
     if (seller) {
@@ -131,7 +142,7 @@ app.get('/api/tickets', async (req, res) => {
   }
 });
 
-// 🔴 NUEVA RUTA: Eliminar ticket (solo del mismo día y del mismo vendedor)
+// Ruta para eliminar ticket (solo del mismo día y del mismo vendedor)
 app.delete('/api/tickets/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -150,9 +161,12 @@ app.delete('/api/tickets/:id', async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para eliminar este ticket' });
     }
 
-    const ticketDate = new Date(ticket.timestamp).toISOString().split('T')[0];
-    const today = new Date().toISOString().split('T')[0];
-    if (ticketDate !== today) {
+    // Verificar que sea del mismo día (usando la misma lógica de Colombia)
+    const todayStart = parseDateToColombiaStart(new Date().toLocaleDateString('sv-SE'));
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    
+    if (ticket.timestamp < todayStart || ticket.timestamp >= todayEnd) {
       return res.status(400).json({ error: 'Solo se pueden eliminar tickets del día actual' });
     }
 
@@ -262,10 +276,11 @@ app.get('/api/reports', async (req, res) => {
     
     let filter = {};
     if (date) {
-      const startDate = new Date(date);
-      const endDate = new Date(date);
-      endDate.setDate(endDate.getDate() + 1);
-      filter.timestamp = { $gte: startDate, $lt: endDate };
+      // 🔴 Usar la función corregida para Colombia
+      const start = parseDateToColombiaStart(date);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      filter.timestamp = { $gte: start, $lt: end };
     }
     
     if (seller) {
