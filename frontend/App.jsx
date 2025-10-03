@@ -39,8 +39,8 @@ const App = () => {
   const [betMode, setBetMode] = useState('single');
   const [multiLotteries, setMultiLotteries] = useState([]);
   const [todayTickets, setTodayTickets] = useState([]);
-  const [showPreviewModal, setShowPreviewModal] = useState(false); // 🔴 Nuevo estado
-  const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' }); // 🔴 Nuevo estado
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' });
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
   const lotterySchedule = [
@@ -366,7 +366,6 @@ const App = () => {
     }
   };
 
-  // 🔴 Nueva función: Enviar reporte desde el modal
   const sendReport = () => {
     openWhatsApp(previewReportData.phone, previewReportData.message);
     try {
@@ -382,7 +381,6 @@ const App = () => {
     alert('Reporte enviado exitosamente');
   };
 
-  // 🔴 Corregido: dailyClose ahora muestra vista previa
   const dailyClose = async () => {
     const today = getLocalDate();
     try {
@@ -441,7 +439,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         });
       });
 
-      // 🔴 Guardar datos para el modal
       setPreviewReportData({
         message: reportMessage,
         phone: cleanPhone,
@@ -455,7 +452,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
           ticketCount
         }
       });
-      setShowPreviewModal(true); // 🔴 Mostrar vista previa
+      setShowPreviewModal(true);
     } catch (error) {
       console.error('Error en cierre diario:', error);
       alert(`Error al generar el reporte diario: ${error.message || 'Verifique la conexión'}`);
@@ -468,16 +465,15 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     setShowDateRangeModal(true);
   };
 
-  // 🔴 Corregido: generateDateRangeReport ahora muestra vista previa
+  // 🔴 Corregido: usar las fechas como cadenas, no como objetos Date
   const generateDateRangeReport = async () => {
     const { start, end } = dateRange;
     if (!start || !end) {
       alert('Seleccione ambas fechas');
       return;
     }
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    if (startDate > endDate) {
+    // ✅ start y end ya son cadenas en formato YYYY-MM-DD
+    if (start > end) {
       alert('La fecha de inicio no puede ser mayor que la fecha de fin');
       return;
     }
@@ -486,6 +482,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
       const sellersData = await sellersResponse.json();
 
+      // ✅ Usar directamente start y end (son cadenas)
       const ticketsResponse = await fetch(`${BACKEND_URL}/api/tickets?startDate=${start}&endDate=${end}&seller=${currentUser.username}`);
       if (!ticketsResponse.ok) throw new Error(`Error HTTP: ${ticketsResponse.status}`);
       const ticketsInRange = await ticketsResponse.json();
@@ -508,7 +505,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       }
       let reportMessage = `REPORTE DE CIERRE - Mi Suerte Online 📊
 `;
-      reportMessage += `Rango de Fechas: ${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}
+      reportMessage += `Rango de Fechas: ${start} al ${end}
 `;
       reportMessage += `Vendedor: ${currentUser.username}
 `;
@@ -536,13 +533,12 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         });
       });
 
-      // 🔴 Guardar datos para el modal
       setPreviewReportData({
         message: reportMessage,
         phone: cleanPhone,
         paymentData: {
           seller: currentUser.username,
-          date: `${new Date(start).toLocaleDateString('es-CO')} al ${new Date(end).toLocaleDateString('es-CO')}`,
+          date: `${start} al ${end}`,
           totalSales,
           commissionRate,
           commissionAmount,
@@ -550,7 +546,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
           ticketCount
         }
       });
-      setShowPreviewModal(true); // 🔴 Mostrar vista previa
+      setShowPreviewModal(true);
       setShowDateRangeModal(false);
     } catch (error) {
       console.error('Error en cierre por rango de fechas:', error);
@@ -621,15 +617,17 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
+  // 🔴 Corregido: cargar sellers también para el vendedor
   useEffect(() => {
     if (userRole === 'admin') {
       loadSellers();
       loadTickets();
       loadPayments();
     } else if (userRole === 'seller') {
+      loadSellers(); // ✅ Cargar sellers para obtener la comisión
       loadTickets();
     }
-  }, [userRole, currentUser]);
+  }, [userRole]);
 
   const openResendModal = (ticket) => {
     setResendTicketData({
@@ -1240,6 +1238,12 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
   if (userRole === 'seller') {
     const today = getLocalDate();
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
+    
+    // ✅ Ahora sellers está cargado, así que esto funciona
+    const seller = sellers.find(s => s.username === currentUser.username);
+    const commissionRate = seller ? seller.commission : 10;
+    const commissionAmount = Math.round(totalSalesToday * commissionRate / 100);
+    const netAmount = totalSalesToday - commissionAmount;
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -1298,6 +1302,26 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {activeTab === 'sales' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
+              
+              {todayTickets.length > 0 && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Vendido</p>
+                      <p className="text-lg font-bold text-green-700">${totalSalesToday.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Comisión ({commissionRate}%)</p>
+                      <p className="text-lg font-bold text-orange-600">${commissionAmount.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Monto a Recibir</p>
+                      <p className="text-lg font-bold text-blue-700">${netAmount.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {todayTickets.length === 0 ? (
                 <p className="text-gray-500">No hay ventas registradas hoy.</p>
               ) : (
@@ -1352,6 +1376,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
 
+          {/* ... resto del código sin cambios ... */}
           {activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
@@ -1738,7 +1763,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
 
-          {/* 🔴 Modal de vista previa de reporte */}
           {showPreviewModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
