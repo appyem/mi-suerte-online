@@ -1,5 +1,4 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-
 const App = () => {
   const [userRole, setUserRole] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -16,11 +15,9 @@ const App = () => {
   const [customerName, setCustomerName] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
-  
   const getLocalDate = () => {
     return new Date().toLocaleDateString('sv-SE');
   };
-  
   const reportDate = getLocalDate();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
@@ -42,6 +39,28 @@ const App = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' });
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
+
+  // 🔴 NUEVA FUNCIÓN: Eliminar ticket (solo para vendedores)
+  const deleteTicket = async (ticketId) => {
+    if (!window.confirm('¿Está seguro que desea eliminar este ticket? Solo se pueden eliminar tickets del día actual.')) return;
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller: currentUser.username }),
+      });
+      if (response.ok) {
+        setTodayTickets(todayTickets.filter(t => t._id !== ticketId));
+        alert('Ticket eliminado exitosamente');
+      } else {
+        const error = await response.json();
+        alert('Error: ' + (error.error || 'No se pudo eliminar el ticket'));
+      }
+    } catch (error) {
+      console.error('Error al eliminar ticket:', error);
+      alert('Error de conexión al intentar eliminar el ticket');
+    }
+  };
 
   const lotterySchedule = [
     { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00' },
@@ -387,7 +406,6 @@ const App = () => {
       const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
       if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
       const sellersData = await sellersResponse.json();
-
       const ticketsResponse = await fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`);
       if (!ticketsResponse.ok) throw new Error(`Error HTTP: ${ticketsResponse.status}`);
       const todayTickets = await ticketsResponse.json();
@@ -438,7 +456,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 `;
         });
       });
-
       setPreviewReportData({
         message: reportMessage,
         phone: cleanPhone,
@@ -465,14 +482,12 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     setShowDateRangeModal(true);
   };
 
-  // 🔴 Corregido: usar las fechas como cadenas, no como objetos Date
   const generateDateRangeReport = async () => {
     const { start, end } = dateRange;
     if (!start || !end) {
       alert('Seleccione ambas fechas');
       return;
     }
-    // ✅ start y end ya son cadenas en formato YYYY-MM-DD
     if (start > end) {
       alert('La fecha de inicio no puede ser mayor que la fecha de fin');
       return;
@@ -481,8 +496,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
       if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
       const sellersData = await sellersResponse.json();
-
-      // ✅ Usar directamente start y end (son cadenas)
       const ticketsResponse = await fetch(`${BACKEND_URL}/api/tickets?startDate=${start}&endDate=${end}&seller=${currentUser.username}`);
       if (!ticketsResponse.ok) throw new Error(`Error HTTP: ${ticketsResponse.status}`);
       const ticketsInRange = await ticketsResponse.json();
@@ -532,7 +545,6 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 `;
         });
       });
-
       setPreviewReportData({
         message: reportMessage,
         phone: cleanPhone,
@@ -617,14 +629,13 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
-  // 🔴 Corregido: cargar sellers también para el vendedor
   useEffect(() => {
     if (userRole === 'admin') {
       loadSellers();
       loadTickets();
       loadPayments();
     } else if (userRole === 'seller') {
-      loadSellers(); // ✅ Cargar sellers para obtener la comisión
+      loadSellers();
       loadTickets();
     }
   }, [userRole]);
@@ -1238,13 +1249,10 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
   if (userRole === 'seller') {
     const today = getLocalDate();
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
-    
-    // ✅ Ahora sellers está cargado, así que esto funciona
     const seller = sellers.find(s => s.username === currentUser.username);
     const commissionRate = seller ? seller.commission : 10;
     const commissionAmount = Math.round(totalSalesToday * commissionRate / 100);
     const netAmount = totalSalesToday - commissionAmount;
-
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
@@ -1298,11 +1306,9 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </button>
             </nav>
           </div>
-
           {activeTab === 'sales' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
-              
               {todayTickets.length > 0 && (
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1321,7 +1327,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   </div>
                 </div>
               )}
-
               {todayTickets.length === 0 ? (
                 <p className="text-gray-500">No hay ventas registradas hoy.</p>
               ) : (
@@ -1375,8 +1380,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               )}
             </div>
           )}
-
-          {/* ... resto del código sin cambios ... */}
           {activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
@@ -1544,7 +1547,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-
           {activeTab === 'close' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Cierre de Caja</h2>
@@ -1565,7 +1567,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-
           {betList.length > 0 && activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Apuestas en el Tiquete</h3>
@@ -1602,7 +1603,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-
           {activeTab === 'create' && (
             <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
@@ -1641,7 +1641,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </button>
             </div>
           )}
-
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1670,7 +1669,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-
           {showResendModal && resendTicketData && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1720,7 +1718,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-
           {showDateRangeModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1762,7 +1759,6 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-
           {showPreviewModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
