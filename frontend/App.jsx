@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
+
 const App = () => {
   const [userRole, setUserRole] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -14,18 +15,17 @@ const App = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
-  const [showReport, setShowReport] = useState(false);
-  const getColombiaDate = () => {
-          const now = new Date();
-
-          const utcOffset = now.getTimezoneOffset() * 60000;
-
-          const colombiaTime = new Date(now.getTime() + utcOffset - 5 * 3600000);
-        
-  return colombiaTime.toISOString().split('T')[0];
   
-};
-  const reportDate = getLocalDate();
+  // 🔧 CORREGIDO: Nueva función para obtener la fecha en Colombia (UTC-5)
+  const getColombiaDate = () => {
+    const now = new Date();
+    const utcOffset = now.getTimezoneOffset() * 60000;
+    const colombiaTime = new Date(now.getTime() + utcOffset - 5 * 3600000);
+    return colombiaTime.toISOString().split('T')[0];
+  };
+
+  const reportDate = getColombiaDate(); // ✅ Usar fecha de Colombia
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
   const [payments, setPayments] = useState([]);
@@ -409,7 +409,7 @@ const App = () => {
   };
 
   const dailyClose = async () => {
-    const today = getColombiaDate();
+    const today = getColombiaDate(); // ✅ Usar fecha de Colombia
     try {
       const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
       if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
@@ -485,7 +485,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   const openDateRangeModal = () => {
-    const today = getColombiaDate();
+    const today = getColombiaDate(); // ✅
     setDateRange({ start: today, end: today });
     setShowDateRangeModal(true);
   };
@@ -614,9 +614,13 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         if (userRole === 'admin') {
           setTickets(ticketsData);
         }
-        const today = getColombiaDate();
+        const today = getColombiaDate(); // ✅ Fecha correcta de Colombia
+        // 🔧 CORREGIDO: comparar en formato ISO (UTC) para consistencia con backend
         const todayTicketsFromDB = ticketsData
-          .filter(t => new Date(t.timestamp).toLocaleDateString('sv-SE') === today)
+          .filter(t => {
+            const ticketDate = new Date(t.timestamp).toISOString().split('T')[0];
+            return ticketDate === today;
+          })
           .map(t => ({ ...t, customerName: '' }));
         setTodayTickets(todayTicketsFromDB);
       }
@@ -948,7 +952,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-green-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getColombiaDate()
+                    new Date(t.timestamp).toISOString().split('T')[0] === getColombiaDate()
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -956,7 +960,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-blue-600">
                   {tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getColombiaDate()
+                    new Date(t.timestamp).toISOString().split('T')[0] === getColombiaDate()
                   ).length}
                 </p>
               </div>
@@ -968,7 +972,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-purple-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getColombiaDate()
+                    new Date(t.timestamp).toISOString().split('T')[0] === getColombiaDate()
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -1255,7 +1259,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
   }
 
   if (userRole === 'seller') {
-    const today = getColombiaDate();
+    const today = getColombiaDate(); // ✅
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
     const seller = sellers.find(s => s.username === currentUser.username);
     const commissionRate = seller ? seller.commission : 10;
