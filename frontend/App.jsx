@@ -45,6 +45,11 @@ const App = () => {
   const [todayTickets, setTodayTickets] = useState([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' });
+  
+  // 🔴 NUEVO: Estados para resultados y ganadores
+  const [lotteryResults, setLotteryResults] = useState([]);
+  const [winningTickets, setWinningTickets] = useState([]);
+
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
   // 🔴 NUEVA FUNCIÓN: Eliminar ticket (solo para vendedores)
@@ -641,14 +646,46 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
+  // 🔴 NUEVAS FUNCIONES: Cargar resultados y ganadores
+  const loadLotteryResults = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/lottery-results`);
+      if (response.ok) {
+        const results = await response.json();
+        setLotteryResults(results);
+      }
+    } catch (error) {
+      console.error('Error al cargar resultados:', error);
+    }
+  };
+
+  const loadWinningTickets = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/winning-tickets`);
+      if (response.ok) {
+        const wins = await response.json();
+        setWinningTickets(wins);
+        if (wins.length > 0) {
+          alert(`🎉 ¡Hay ${wins.length} ticket(s) ganador(es) hoy! Revise la pestaña "Ganadores".`);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar tickets ganadores:', error);
+    }
+  };
+
   useEffect(() => {
     if (userRole === 'admin') {
       loadSellers();
       loadTickets();
       loadPayments();
+      loadLotteryResults();    // ✅ NUEVO
+      loadWinningTickets();    // ✅ NUEVO
     } else if (userRole === 'seller') {
       loadSellers();
       loadTickets();
+      loadLotteryResults();    // ✅ NUEVO
+      loadWinningTickets();    // ✅ NUEVO
     }
   }, [userRole]);
 
@@ -930,7 +967,9 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 { id: 'reports', name: 'Reportes Avanzados' },
                 { id: 'sellers', name: 'Gestión Vendedores' },
                 { id: 'payments', name: 'Pagos a Vendedores' },
-                { id: 'lotteries', name: 'Loterías' }
+                { id: 'lotteries', name: 'Loterías' },
+                { id: 'results', name: 'Resultados' },    // ✅ NUEVO
+                { id: 'winners', name: 'Ganadores' }      // ✅ NUEVO
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1151,6 +1190,61 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
+          {/* 🔴 NUEVO: Resultados */}
+          {activeTab === 'results' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
+              {lotteryResults.length === 0 ? (
+                <p className="text-gray-500">Cargando resultados...</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {lotteryResults.map((result, i) => (
+                    <div key={i} className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <p className="font-bold text-green-800">{result.lottery}</p>
+                      <p className="text-2xl font-mono text-green-700 mt-2">{result.winningNumber}</p>
+                      <p className="text-sm text-gray-600">Fecha: {result.date}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {/* 🔴 NUEVO: Ganadores */}
+          {activeTab === 'winners' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
+              {winningTickets.length === 0 ? (
+                <p className="text-gray-500">No hay tickets ganadores hoy.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lotería</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jugado</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ganador</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {winningTickets.map((win, i) => (
+                        <tr key={i} className="bg-yellow-50">
+                          <td className="px-4 py-3 font-medium">{win.ticketId}</td>
+                          <td className="px-4 py-3">{win.lottery}</td>
+                          <td className="px-4 py-3 text-green-700 font-bold">{win.playedNumber}</td>
+                          <td className="px-4 py-3 text-blue-700 font-mono">{win.winningNumber}</td>
+                          <td className="px-4 py-3">{win.seller}</td>
+                          <td className="px-4 py-3">+57{win.customerPhone}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1315,6 +1409,26 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 }`}
               >
                 Cierre de Caja
+              </button>
+              <button
+                onClick={() => setActiveTab('results')}
+                className={`py-2 px-1 font-medium text-sm ${
+                  activeTab === 'results'
+                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Resultados
+              </button>
+              <button
+                onClick={() => setActiveTab('winners')}
+                className={`py-2 px-1 font-medium text-sm ${
+                  activeTab === 'winners'
+                    ? 'text-blue-600 border-b-2 border-blue-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Ganadores
               </button>
             </nav>
           </div>
@@ -1577,6 +1691,61 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   Cierre por Rango de Fechas
                 </button>
               </div>
+            </div>
+          )}
+          {/* 🔴 NUEVO: Resultados para vendedor */}
+          {activeTab === 'results' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
+              {lotteryResults.length === 0 ? (
+                <p className="text-gray-500">Cargando resultados...</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {lotteryResults.map((result, i) => (
+                    <div key={i} className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <p className="font-bold text-green-800">{result.lottery}</p>
+                      <p className="text-2xl font-mono text-green-700 mt-2">{result.winningNumber}</p>
+                      <p className="text-sm text-gray-600">Fecha: {result.date}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {/* 🔴 NUEVO: Ganadores para vendedor */}
+          {activeTab === 'winners' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
+              {winningTickets.length === 0 ? (
+                <p className="text-gray-500">No hay tickets ganadores hoy.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lotería</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jugado</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ganador</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {winningTickets
+                        .filter(w => w.seller === currentUser.username)
+                        .map((win, i) => (
+                          <tr key={i} className="bg-yellow-50">
+                            <td className="px-4 py-3 font-medium">{win.ticketId}</td>
+                            <td className="px-4 py-3">{win.lottery}</td>
+                            <td className="px-4 py-3 text-green-700 font-bold">{win.playedNumber}</td>
+                            <td className="px-4 py-3 text-blue-700 font-mono">{win.winningNumber}</td>
+                            <td className="px-4 py-3">+57{win.customerPhone}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
           {betList.length > 0 && activeTab === 'create' && (
