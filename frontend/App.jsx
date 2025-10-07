@@ -15,9 +15,16 @@ const App = () => {
   const [customerName, setCustomerName] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
   const [showReport, setShowReport] = useState(false);
-  const getLocalDate = () => {
-    return new Date().toLocaleDateString('sv-SE');
-  };
+  const getColombiaDate = () => {
+          const now = new Date();
+
+          const utcOffset = now.getTimezoneOffset() * 60000;
+
+          const colombiaTime = new Date(now.getTime() + utcOffset - 5 * 3600000);
+        
+  return colombiaTime.toISOString().split('T')[0];
+  
+};
   const reportDate = getLocalDate();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
@@ -32,7 +39,7 @@ const App = () => {
   const [showResendModal, setShowResendModal] = useState(false);
   const [resendTicketData, setResendTicketData] = useState(null);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: getLocalDate(), end: getLocalDate() });
+  const [dateRange, setDateRange] = useState({ start: getColombiaDate(), end: getColombiaDate() });
   const [betMode, setBetMode] = useState('single');
   const [multiLotteries, setMultiLotteries] = useState([]);
   const [todayTickets, setTodayTickets] = useState([]);
@@ -402,7 +409,7 @@ const App = () => {
   };
 
   const dailyClose = async () => {
-    const today = getLocalDate();
+    const today = getColombiaDate();
     try {
       const sellersResponse = await fetch(`${BACKEND_URL}/api/sellers`);
       if (!sellersResponse.ok) throw new Error('Error al cargar vendedores');
@@ -478,7 +485,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   const openDateRangeModal = () => {
-    const today = getLocalDate();
+    const today = getColombiaDate();
     setDateRange({ start: today, end: today });
     setShowDateRangeModal(true);
   };
@@ -607,7 +614,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         if (userRole === 'admin') {
           setTickets(ticketsData);
         }
-        const today = getLocalDate();
+        const today = getColombiaDate();
         const todayTicketsFromDB = ticketsData
           .filter(t => new Date(t.timestamp).toLocaleDateString('sv-SE') === today)
           .map(t => ({ ...t, customerName: '' }));
@@ -786,7 +793,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     return Object.values(paymentSummary);
   };
 
-  const generateDetailedReport = async (type, date = getLocalDate()) => {
+  const generateDetailedReport = async (type, date = getColombiaDate()) => {
     if (!type) {
       alert('Seleccione un tipo de reporte');
       return;
@@ -810,7 +817,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     const element = document.createElement("a");
     const file = new Blob([JSON.stringify(currentReport, null, 2)], {type: 'application/json'});
     element.href = URL.createObjectURL(file);
-    element.download = `reporte_${reportType}_${getLocalDate()}.json`;
+    element.download = `reporte_${reportType}_${getColombiaDate()}.json`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -941,7 +948,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-green-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate()
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getColombiaDate()
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -949,7 +956,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-blue-600">
                   {tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate()
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getColombiaDate()
                   ).length}
                 </p>
               </div>
@@ -961,7 +968,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-purple-600">
                   ${tickets.filter(t => 
-                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getLocalDate()
+                    new Date(t.timestamp).toLocaleDateString('sv-SE') === getColombiaDate()
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
@@ -1248,7 +1255,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
   }
 
   if (userRole === 'seller') {
-    const today = getLocalDate();
+    const today = getColombiaDate();
     const totalSalesToday = todayTickets.reduce((sum, ticket) => sum + (ticket.total || 0), 0);
     const seller = sellers.find(s => s.username === currentUser.username);
     const commissionRate = seller ? seller.commission : 10;
