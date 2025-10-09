@@ -337,12 +337,21 @@ const App = () => {
 
   const openSMS = (phone, message) => {
     const cleanPhone = phone.replace(/\D/g, '');
-    const smsUrl = `sms:57${cleanPhone}?body=${encodeURIComponent(message)}`;
+    const fullPhone = `57${cleanPhone}`;
+    
+    // Detectar si es iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    let smsUrl;
+    if (isIOS) {
+      smsUrl = `sms:${fullPhone}&body=${encodeURIComponent(message)}`;
+    } else {
+      smsUrl = `sms:${fullPhone}?body=${encodeURIComponent(message)}`;
+    }
     
     const smsLink = document.createElement('a');
     smsLink.href = smsUrl;
-    smsLink.target = '_top';
-    smsLink.rel = 'noopener noreferrer';
+    smsLink.style.display = 'none';
     document.body.appendChild(smsLink);
     smsLink.click();
     document.body.removeChild(smsLink);
