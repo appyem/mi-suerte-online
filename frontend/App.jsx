@@ -18,10 +18,9 @@ const App = () => {
   
   // 🔧 CORREGIDO: Nueva función para obtener la fecha en Colombia (UTC-5)
   const getColombiaDate = () => {
-    const now = new Date();
-    const utcOffset = now.getTimezoneOffset() * 60000;
-    const colombiaTime = new Date(now.getTime() + utcOffset - 5 * 3600000);
-    return colombiaTime.toISOString().split('T')[0];
+    return new Date().toLocaleDateString('sv-SE', {
+      timeZone: 'America/Bogota'
+    });
   };
 
   const reportDate = getColombiaDate(); // ✅ Usar fecha de Colombia
@@ -623,8 +622,10 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         // 🔧 CORREGIDO: comparar en formato ISO (UTC) para consistencia con backend
         const todayTicketsFromDB = ticketsData
           .filter(t => {
-            const ticketDate = new Date(t.timestamp).toISOString().split('T')[0];
-            return ticketDate === today;
+            const ticketDateColombia = new Date(t.timestamp).toLocaleDateString('sv-SE', {
+              timeZone: 'America/Bogota'
+			});
+			return ticketDateColombia === today;
           })
           .map(t => ({ ...t, customerName: '' }));
         setTodayTickets(todayTicketsFromDB);
