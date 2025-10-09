@@ -338,23 +338,10 @@ const App = () => {
   const openSMS = (phone, message) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const fullPhone = `57${cleanPhone}`;
+    const smsUrl = `sms:${fullPhone}?body=${encodeURIComponent(message)}`;
     
-    // Detectar si es iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    
-    let smsUrl;
-    if (isIOS) {
-      smsUrl = `sms:${fullPhone}&body=${encodeURIComponent(message)}`;
-    } else {
-      smsUrl = `sms:${fullPhone}?body=${encodeURIComponent(message)}`;
-    }
-    
-    const smsLink = document.createElement('a');
-    smsLink.href = smsUrl;
-    smsLink.style.display = 'none';
-    document.body.appendChild(smsLink);
-    smsLink.click();
-    document.body.removeChild(smsLink);
+    // Abrir directamente con window.location.href (más confiable en Android)
+    window.location.href = smsUrl;
   };
 
 
