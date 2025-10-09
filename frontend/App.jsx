@@ -44,6 +44,8 @@ const App = () => {
   const [todayTickets, setTodayTickets] = useState([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' });
+  const [showSendMethodModal, setShowSendMethodModal] = useState(false);
+  const [ticketToBeSent, setTicketToBeSent] = useState(null);
   
   // 🔴 NUEVO: Estados para resultados y ganadores
   const [lotteryResults, setLotteryResults] = useState([]);
@@ -333,6 +335,21 @@ const App = () => {
     document.body.removeChild(waLink);
   };
 
+  const openSMS = (phone, message) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const smsUrl = `sms:57${cleanPhone}?body=${encodeURIComponent(message)}`;
+    
+    const smsLink = document.createElement('a');
+    smsLink.href = smsUrl;
+    smsLink.target = '_top';
+    smsLink.rel = 'noopener noreferrer';
+    document.body.appendChild(smsLink);
+    smsLink.click();
+    document.body.removeChild(smsLink);
+  };
+
+
+
   const confirmTicket = () => {
     if (betList.length === 0) {
       alert('No hay apuestas para generar el tiquete');
@@ -344,9 +361,10 @@ const App = () => {
     }
     setShowConfirmModal(true);
   };
-
+  
   const generateTicket = async () => {
     setShowConfirmModal(false);
+    
     const ticket = {
       ticketId: `TKT${Date.now()}`,
       seller: currentUser.username,
@@ -355,8 +373,7 @@ const App = () => {
       customerPhone,
       timestamp: new Date()
     };
-    const ticketWithCustomer = { ...ticket, customerName };
-    setTodayTickets(prev => [...prev, ticketWithCustomer]);
+
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets`, {
         method: 'POST',
@@ -370,33 +387,54 @@ const App = () => {
           timestamp: ticket.timestamp
         }),
       });
+      
       if (!response.ok) throw new Error('Error al guardar el ticket');
-      let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀
-`;
-      message += `Tiquete: ${ticket.ticketId}
-`;
-      message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}
-`;
-      message += `Vendedor: ${ticket.seller}
-`;
-      message += `Total: $${ticket.total.toLocaleString()}
-`;
-      message += `Detalles de apuestas:
-`;
+      
+      let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀\n`;
+      message += `Tiquete: ${ticket.ticketId}\n`;
+      message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
+      message += `Vendedor: ${ticket.seller}\n`;
+      message += `Total: $${ticket.total.toLocaleString()}\n`;
+      message += `Detalles de apuestas:\n`;
       ticket.bets.forEach((bet, index) => {
-        message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}
-`;
+        message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
       });
-      openWhatsApp(customerPhone, message);
+
+      setTicketToBeSent({
+        ticket,
+        message,
+        customerName,
+        customerPhone
+      });
+      
+      setShowSendMethodModal(true);
+      
+      const ticketWithCustomer = { ...ticket, customerName };
+      setTodayTickets(prev => [...prev, ticketWithCustomer]);
+      
       setBetList([]);
       setCustomerPhone('');
       setCustomerName('');
+      
     } catch (error) {
       console.error('Error:', error);
       alert('Hubo un error al guardar el ticket. Por favor intenta nuevamente.');
     }
-  };
-
+  };  
+  
+  const sendTicketByMethod = (method) => {
+    if (!ticketToBeSent) return;
+    
+    const { message, customerPhone } = ticketToBeSent;
+    
+    if (method === 'whatsapp') {
+      openWhatsApp(customerPhone, message);
+    } else if (method === 'sms') {
+      openSMS(customerPhone, message);
+    }
+    
+    setShowSendMethodModal(false);
+  };  
   const sendReport = () => {
     openWhatsApp(previewReportData.phone, previewReportData.message);
     try {
@@ -1851,6 +1889,39 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
+		  
+          {/* Modal para elegir método de envío */}
+          {showSendMethodModal && ticketToBeSent && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl p-6 max-w-md w-full">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Enviar Ticket</h3>
+                <p className="text-gray-600 mb-6">
+                  ¿Cómo deseas enviar el ticket al cliente?
+                </p>
+                <div className="flex flex-col space-y-3">
+                  <button
+                    onClick={() => sendTicketByMethod('whatsapp')}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center"
+                  >
+                    Enviar por WhatsApp
+                  </button>
+                  <button
+                    onClick={() => sendTicketByMethod('sms')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center"
+                  >
+                    Enviar por SMS
+                  </button>
+                  <button
+                    onClick={() => setShowSendMethodModal(false)}
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-4 rounded-lg transition duration-300"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}		  
+		  
           {showResendModal && resendTicketData && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
