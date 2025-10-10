@@ -348,12 +348,15 @@ app.get('/api/reports', async (req, res) => {
   }
 });
 
-// 🔴 NUEVO: Consumir API oficial de resultados
+// 🔴 NUEVO: Consumir API oficial de resultados (CORREGIDO para usar fecha de Colombia)
 const fetchOfficialResults = async (date = null) => {
   try {
-    const url = date 
-      ? `https://api-resultadosloterias.com/api/results/${date}`
-      : `https://api-resultadosloterias.com/api/results`;
+    // Si no se da una fecha, usar la fecha actual EN COLOMBIA
+    const targetDate = date || new Date().toLocaleDateString('sv-SE', {
+      timeZone: 'America/Bogota'
+    });
+    
+    const url = `https://api-resultadosloterias.com/api/results/${targetDate}`;
     
     const response = await axios.get(url, { timeout: 5000 });
     
@@ -368,7 +371,9 @@ const fetchOfficialResults = async (date = null) => {
   } catch (error) {
     console.error('⚠️ Error al consumir API oficial:', error.message);
     // Fallback: resultados simulados actualizados
-    const fallbackDate = date || new Date().toISOString().split('T')[0];
+    const fallbackDate = date || new Date().toLocaleDateString('sv-SE', {
+      timeZone: 'America/Bogota'
+    });
     return [
       { lottery: 'CHONTICO NOCHE', winningNumber: '1234', date: fallbackDate },
       { lottery: 'DORADO TARDE', winningNumber: '567', date: fallbackDate },
