@@ -684,7 +684,16 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   // 🔴 NUEVAS FUNCIONES: Cargar resultados y ganadores
   const loadLotteryResults = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/lottery-results`);
+      // Calcular "ayer" en Colombia
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      
+      const yesterdayColombia = yesterday.toLocaleDateString('sv-SE', {
+        timeZone: 'America/Bogota'
+      });
+      
+      const response = await fetch(`${BACKEND_URL}/api/lottery-results?date=${yesterdayColombia}`);
       if (response.ok) {
         const results = await response.json();
         setLotteryResults(results);
