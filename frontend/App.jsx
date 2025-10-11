@@ -27,6 +27,7 @@ const App = () => {
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
+  
   const [payments, setPayments] = useState([]);
   const [showReportModal, setShowReportModal] = useState(false);
   const [currentReport, setCurrentReport] = useState(null);
@@ -46,6 +47,8 @@ const App = () => {
   const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' });
   const [showSendMethodModal, setShowSendMethodModal] = useState(false);
   const [ticketToBeSent, setTicketToBeSent] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
   
   // 🔴 NUEVO: Estados para resultados y ganadores
   const [lotteryResults, setLotteryResults] = useState([]);
@@ -55,7 +58,7 @@ const App = () => {
 
   // 🔴 NUEVA FUNCIÓN: Eliminar ticket (solo para vendedores)
   const deleteTicket = async (ticketId) => {
-    if (!window.confirm('¿Está seguro que desea eliminar este ticket? Solo se pueden eliminar tickets del día actual.')) return;
+    if (!window.confirm('¿Está seguro que desea eliminar este ticket? Solo se pueden eliminar tickets del día actual.')) return;º
     try {
       const response = await fetch(`${BACKEND_URL}/api/tickets/${ticketId}`, {
         method: 'DELETE',
@@ -71,7 +74,7 @@ const App = () => {
       }
     } catch (error) {
       console.error('Error al eliminar ticket:', error);
-      alert('Error de conexión al intentar eliminar el ticket');
+      alert('Error de conexión al intentar eliminar el ticket');{"type":"chat","id":"47a1af8a-0bce-49e4-9048-82c7fc608d89","item":{"id":"47a1af8a-0bce-49e4-9048-82c7fc608d89"}}
     }
   };
 
@@ -1527,7 +1530,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             {new Date(ticket.timestamp).toLocaleTimeString('es-CO')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            <div className="flex space-x-2">
+						    <div className="flex space-x-2">
                               <button
                                 onClick={() => openResendModal(ticket)}
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
@@ -1540,8 +1543,17 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                               >
                                 Eliminar
                               </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedTicket(ticket);
+                                  setShowDetailsModal(true);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs"
+                              >
+                                Detalles
+                              </button>
                             </div>
-                          </td>
+                          </td>						  
                         </tr>
                       ))}
                     </tbody>
@@ -2044,6 +2056,54 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       Cancelar
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+		  {showDetailsModal && selectedTicket && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-gray-200">
+				  <h3 className="text-xl font-bold text-gray-900">Detalles del Ticket</h3>
+				  <p className="text-gray-600">ID: {selectedTicket.ticketId}</p>
+                </div>
+				<div className="p-6">
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <span className="font-medium">Fecha:</span> {new Date(selectedTicket.timestamp).toLocaleString('es-CO')}
+                    </div>
+                    <div>
+                      <span className="font-medium">Cliente:</span> {selectedTicket.customerName || 'No especificado'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Teléfono:</span> +57{selectedTicket.customerPhone}
+                    </div>
+                    <div>
+                      <span className="font-medium">Vendedor:</span> {selectedTicket.seller}
+                    </div>
+                    <div className="pt-2 border-t border-gray-200">
+                      <span className="font-bold">Apuestas:</span>
+                      <ul className="mt-2 space-y-1">
+                        {selectedTicket.bets.map((bet, idx) => (
+                          <li key={idx} className="flex justify-between">
+                            <span>{bet.lottery} - {bet.number} ({bet.digits} cifras)</span>
+                            <span>$ {parseInt(bet.amount).toLocaleString()}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="pt-3 border-t border-gray-200 font-bold text-lg">
+                      <span>Total: $ {selectedTicket.total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 border-t border-gray-200 flex justify-end">
+                  <button
+                    onClick={() => setShowDetailsModal(false)}
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition duration-300"
+                  >
+                    Cerrar
+                  </button>
                 </div>
               </div>
             </div>
