@@ -1541,8 +1541,8 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => openResendModal(ticket)}
-                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
+                                onClick={() => openTicketDetailsModal(ticket)}
+                                className="bg-blue-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
                               >
 							    Detalles
                               </button>
