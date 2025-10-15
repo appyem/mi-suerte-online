@@ -170,7 +170,8 @@ app.delete('/api/tickets/:id', async (req, res) => {
     }
 
     // Verificar que sea del mismo día (usando la misma lógica de Colombia)
-    const todayStart = parseDateToColombia(new Date().toLocaleDateString('sv-SE'));
+    const nowInColombia = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
+    const todayStart = parseDateToColombia(nowInColombia);
     const todayEnd = new Date(todayStart);
     todayEnd.setDate(todayEnd.getDate() + 1);
     
