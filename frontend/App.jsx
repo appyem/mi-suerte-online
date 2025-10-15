@@ -46,6 +46,8 @@ const App = () => {
   const [previewReportData, setPreviewReportData] = useState({ message: '', phone: '' });
   const [showSendMethodModal, setShowSendMethodModal] = useState(false);
   const [ticketToBeSent, setTicketToBeSent] = useState(null);
+  const [showTicketDetailsModal, setShowTicketDetailsModal] = useState(false);
+  const [selectedTicketDetails, setSelectedTicketDetails] = useState(null);
   
   // 🔴 NUEVO: Estados para resultados y ganadores
   const [lotteryResults, setLotteryResults] = useState([]);
@@ -746,7 +748,12 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     });
     setShowResendModal(true);
   };
-
+  
+  const openTicketDetailsModal = (ticket) => {
+    setSelectedTicketDetails(ticket);
+    setShowTicketDetailsModal(true);
+  };
+ 
   const resendTicket = () => {
     if (!resendTicketData) return;
     const { customerName: name, customerPhone: phone, bets, total, ticketId, seller, timestamp } = resendTicketData;
@@ -1537,6 +1544,12 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                                 onClick={() => openResendModal(ticket)}
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
                               >
+							    Detalles
+                              </button>
+                              <button
+                                onClick={() => openResendModal(ticket)}
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
+							  							  
                                 Reenviar
                               </button>
                               <button
@@ -2053,7 +2066,69 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               </div>
             </div>
           )}
-        </div>
+		  
+		  {showTicketDetailsModal && selectedTicketDetails && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-xl font-bold text-gray-900">Detalles del Ticket</h3>
+                  <button
+                    onClick={() => setShowTicketDetailsModal(false)}
+                    className="text-gray-500 hover:text-gray-700 font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <p className="text-sm text-gray-600">ID del Ticket</p>
+                      <p className="font-mono font-bold">{selectedTicketDetails.ticketId}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Fecha y Hora</p>
+                      <p>{new Date(selectedTicketDetails.timestamp).toLocaleString('es-CO')}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Vendedor</p>
+                      <p>{selectedTicketDetails.seller}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Cliente</p>
+                      <p>{selectedTicketDetails.customerName || 'Sin nombre'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Teléfono</p>
+                      <p>+57{selectedTicketDetails.customerPhone}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Total</p>
+                      <p className="text-lg font-bold text-green-700">${selectedTicketDetails.total.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <h4 className="font-bold text-gray-800 mb-3">Apuestas:</h4>
+                  <div className="space-y-2">
+                    {selectedTicketDetails.bets && selectedTicketDetails.bets.map((bet, idx) => (
+                      <div key={idx} className="border border-gray-200 rounded p-3 bg-gray-50">
+                        <p className="font-medium">{bet.lottery}</p>
+                        <p>Número: <span className="font-mono">{bet.number}</span> ({bet.digits} cifras)</p>
+                        <p>Monto: ${parseInt(bet.amount).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-6 border-t border-gray-200 text-right">
+                  <button
+                    onClick={() => setShowTicketDetailsModal(false)}
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+		</div>
       </div>
     );
   }
