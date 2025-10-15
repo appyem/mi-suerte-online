@@ -367,6 +367,7 @@ const App = () => {
       bets: [...betList],
       total: betList.reduce((sum, bet) => sum + parseInt(bet.amount), 0),
       customerPhone,
+	  customerName,
       timestamp: new Date()
     };
 
@@ -380,6 +381,7 @@ const App = () => {
           bets: ticket.bets,
           total: ticket.total,
           customerPhone: ticket.customerPhone,
+		  customerName: ticket.customerName,
           timestamp: ticket.timestamp
         }),
       });
@@ -661,7 +663,10 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 			});
 			return ticketDateColombia === today;
           })
-          .map(t => ({ ...t, customerName: '' }));
+          .map(t => ({
+			...t,
+			customerName: t.customerName || '' // ✅ USAR EL NOMBRE DE LA BD
+		  }));	
         setTodayTickets(todayTicketsFromDB);
       }
     } catch (error) {

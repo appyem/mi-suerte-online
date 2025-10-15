@@ -31,6 +31,7 @@ const ticketSchema = new mongoose.Schema({
   bets: Array,
   total: Number,
   customerPhone: String,
+  customerName: { type: String, default: '' }, // ✅ NUEVO CAMPO
   timestamp: { type: Date, default: Date.now },
 });
 
