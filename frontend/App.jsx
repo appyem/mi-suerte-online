@@ -1549,7 +1549,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                               <button
                                 onClick={() => openResendModal(ticket)}
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
-							  							  
+							  >							  
                                 Reenviar
                               </button>
                               <button
