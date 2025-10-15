@@ -425,16 +425,28 @@ const App = () => {
   const sendTicketByMethod = (method) => {
     if (!ticketToBeSent) return;
     
-    const { message, customerPhone } = ticketToBeSent;
+    const { ticket, customerPhone } = ticketToBeSent;
     
     if (method === 'whatsapp') {
-      openWhatsApp(customerPhone, message);
+      openWhatsApp(customerPhone, ticketToBeSent.message);
     } else if (method === 'sms') {
-      openSMS(customerPhone, message);
-    }
+      // SMS: mensaje CORTO y compatible
+      let smsMessage = `Mi Suerte Online 🍀\n`;
+      ticket.bets.forEach((bet, index) => {
+        smsMessage += `${index + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
+      });
+      smsMessage += `Total: $${ticket.total.toLocaleString()}`;
     
+      // Asegurar que el mensaje no exceda ~160 caracteres (ideal para SMS)
+      if (smsMessage.length > 160) {
+        // Versión ultra corta si hay muchas apuestas
+        smsMessage = `Tiquete ${ticket.ticketId}: ${ticket.bets.length} apuestas. Total: $${ticket.total.toLocaleString()}`;
+      }
+    
+      openSMS(customerPhone, smsMessage);
+    }
     setShowSendMethodModal(false);
-  };  
+  };
   const sendReport = () => {
     openWhatsApp(previewReportData.phone, previewReportData.message);
     try {
