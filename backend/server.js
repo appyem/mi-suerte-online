@@ -401,17 +401,23 @@ app.get('/api/lottery-results', async (req, res) => {
 // 🔴 NUEVA RUTA: Verificar tickets ganadores (usa la API real)
 app.get('/api/winning-tickets', async (req, res) => {
   try {
-    // 1. Obtener resultados oficiales de HOY
-    const today = new Date().toISOString().split('T')[0];
-    const officialResults = await fetchOfficialResults(today);
-    
-    // 2. Calcular rango de fechas para "hoy" en Colombia
-    const start = parseDateToColombia(today);
+// 1. Calcular "ayer" en Colombia
+    const todayInColombia = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
+    const todayDate = new Date(todayInColombia);
+    const yesterdayDate = new Date(todayDate);
+    yesterdayDate.setDate(todayDate.getDate() - 1);
+    const yesterday = yesterdayDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+
+// 2. Obtener resultados oficiales de AYER
+    const officialResults = await fetchOfficialResults(yesterday);
+
+// 3. Calcular rango de fechas para "ayer" en Colombia
+    const start = parseDateToColombia(yesterday);
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
 
-    // 3. Obtener todos los tickets del día
-    const tickets = await Ticket.find({ timestamp: { $gte: start, $lt: end } });
+// 4. Obtener todos los tickets de AYER
+    const tickets = await Ticket.find({ timestamp: { $gte: start, $lt: end } });   
 
     // 4. Verificar coincidencias (2, 3 o 4 cifras al final del número ganador)
     const winningTickets = [];
