@@ -383,6 +383,7 @@ const App = () => {
           bets: ticket.bets,
           total: ticket.total,
           customerPhone: ticket.customerPhone,
+		  customerName: customerName,
           timestamp: ticket.timestamp
         }),
       });
@@ -408,7 +409,7 @@ const App = () => {
       
       setShowSendMethodModal(true);
       
-      const ticketWithCustomer = { ...ticket, customerName };
+      const ticketWithCustomer = { ...ticket, customerName: customerName || '' };
       setTodayTickets(prev => [...prev, ticketWithCustomer]);
       
       setBetList([]);
@@ -663,8 +664,11 @@ Tiquete #${index + 1}: ${ticket.ticketId}
               timeZone: 'America/Bogota'
 			});
 			return ticketDateColombia === today;
-          })
-          .map(t => ({ ...t, customerName: '' }));
+         .})
+          .map(t => ({
+			...t,  
+			customerName: t.customerName || '' // ✅ Usa el nombre guardado, o cadena vacía si no existe  
+		  }));	  
         setTodayTickets(todayTicketsFromDB);
       }
     } catch (error) {
