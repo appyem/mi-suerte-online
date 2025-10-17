@@ -1033,33 +1033,35 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <span className="text-gray-600">Bienvenido, {currentUser.username}</span>
                 <button
                   onClick={logout}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-300"
+                  className="bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white px-4 py-2 rounded-lg transition duration-300 font-semibold shadow-md"
                 >
-                  Cerrar Sesión
+                  🚪 Cerrar Sesión
                 </button>
               </div>
             </div>
           </div>
         </header>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="border-b border-gray-200 mb-8">
-            <nav className="flex space-x-8">
+        <div className="flex">
+          {/* Sidebar - Menú vertical */}
+          <div className="w-64 bg-gradient-to-b from-green-900 to-emerald-900 text-white min-h-screen p-4 shadow-lg">
+            <h1 className="text-xl font-bold mb-6 text-center text-yellow-300">🎰 Mi Suerte Online</h1>
+            <nav className="space-y-2">
               {[
-                { id: 'dashboard', name: 'Dashboard' },
-                { id: 'reports', name: 'Reportes Avanzados' },
-                { id: 'sellers', name: 'Gestión Vendedores' },
-                { id: 'payments', name: 'Pagos a Vendedores' },
-                { id: 'lotteries', name: 'Loterías' },
-                { id: 'results', name: 'Resultados' },    // ✅ NUEVO
-                { id: 'winners', name: 'Ganadores' }      // ✅ NUEVO
+                { id: 'dashboard', name: '📊 Dashboard' },
+                { id: 'reports', name: '📈 Reportes Avanzados' },
+                { id: 'sellers', name: '👥 Gestión Vendedores' },
+                { id: 'payments', name: '💰 Pagos a Vendedores' },
+                { id: 'lotteries', name: '🎲 Loterías' },
+                { id: 'results', name: '🏆 Resultados' },
+                { id: 'winners', name: '🎉 Ganadores' }
               ].map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-yellow-500 text-green-900 font-bold'
+                      : 'text-white hover:bg-green-800'
                   }`}
                 >
                   {tab.name}
@@ -1067,6 +1069,9 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               ))}
             </nav>
           </div>
+
+          {/* Contenido principal */}
+          <div className="flex-1 p-6 bg-gray-50">
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -1338,6 +1343,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               )}
             </div>
           )}
+        </div>
         </div>
         {showReportModal && currentReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
