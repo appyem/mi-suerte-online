@@ -1041,11 +1041,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           </div>
         </header>
-        <div className="flex">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Sidebar - Menú vertical */}
-          <div className="w-64 bg-gradient-to-b from-green-900 to-emerald-900 text-white min-h-screen p-4 shadow-lg">
-            <h1 className="text-xl font-bold mb-6 text-center text-yellow-300">🎰 Mi Suerte Online</h1>
-            <nav className="space-y-2">
+          <div className="border-b border-gray-200 mb-6">
+            
+            <nav className="-mb-px flex space-x-6 overflow-x-auto pb-2">
               {[
                 { id: 'dashboard', name: '📊 Dashboard' },
                 { id: 'reports', name: '📈 Reportes Avanzados' },
@@ -1058,10 +1058,10 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                  className={`whitespace-nowrap py-2 px-1 font-medium text-sm ${
                     activeTab === tab.id
-                      ? 'bg-yellow-500 text-green-900 font-bold'
-                      : 'text-white hover:bg-green-800'
+                      ? 'text-green-600 border-b-2 border-green-600'
+                      : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   {tab.name}
@@ -1071,7 +1071,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           </div>
 
           {/* Contenido principal */}
-          <div className="flex-1 p-6 bg-gray-50">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
