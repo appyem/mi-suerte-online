@@ -22,9 +22,8 @@ const App = () => {
       timeZone: 'America/Bogota'
     });
   };
-
-  const reportDate = getColombiaDate(); // ✅ Usar fecha de Colombia
-
+  const [reportStartDate, setReportStartDate] = useState(getColombiaDate());
+  const [reportEndDate, setReportEndDate] = useState(getColombiaDate());
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
   const [payments, setPayments] = useState([]);
@@ -912,9 +911,13 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     return Object.values(paymentSummary);
   };
 
-  const generateDetailedReport = async (type, date = getColombiaDate()) => {
+  const generateDetailedReport = async (type) => {
     if (!type) {
       alert('Seleccione un tipo de reporte');
+      return;
+    }
+    if (reportStartDate > reportEndDate) {
+      alert('La fecha de inicio no puede ser mayor que la fecha de fin');
       return;
     }
     try {
@@ -1111,14 +1114,25 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       <option value="payments">Reporte de Pagos a Vendedores</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Específica</label>
-                    <input
-                      type="date"
-                      value={reportDate}
-                      onChange={(e) => setReportDate(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
+                      <input
+                        type="date"
+                        value={reportStartDate}
+                        onChange={(e) => setReportStartDate(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
+                      <input
+                        type="date"
+                        value={reportEndDate}
+                        onChange={(e) => setReportEndDate(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor (Opcional)</label>
@@ -1135,7 +1149,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   </div>
                 </div>
                 <button
-                  onClick={() => generateDetailedReport(reportType, reportDate)}
+                  onClick={() => generateDetailedReport(reportType)}
                   disabled={!reportType}
                   className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
                 >
