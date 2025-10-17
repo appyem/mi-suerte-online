@@ -1532,60 +1532,55 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 </div>
               )}
               {todayTickets.length === 0 ? (
-                <p className="text-gray-500">No hay ventas registradas hoy.</p>
+                <p className="text-gray-500 text-center py-8">No hay ventas registradas hoy.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lotería</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {todayTickets.map((ticket, index) => (
-                        <tr key={index}>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{ticket.ticketId}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.lottery || '-'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.bets[0]?.number || '-'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-bold">${ticket.total.toLocaleString()}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{ticket.customerName || 'Sin nombre'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">+57{ticket.customerPhone}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            {new Date(ticket.timestamp).toLocaleTimeString('es-CO')}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => openTicketDetailsModal(ticket)}
-                                className="bg-blue-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
-                              >
-							    Detalles
-                              </button>
-                              <button
-                                onClick={() => openResendModal(ticket)}
-                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
-							  >							  
-                                Reenviar
-                              </button>
-                              <button
-                                onClick={() => deleteTicket(ticket._id)}
-                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
-                              >
-                                Eliminar
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-4">
+                  {todayTickets.map((ticket, index) => (
+                    <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Ticket: {ticket.ticketId}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(ticket.timestamp).toLocaleDateString('es-CO')} • 
+                              {new Date(ticket.timestamp).toLocaleTimeString('es-CO')}
+                            </p>
+                          </div>
+                          <span className="text-lg font-bold text-green-700">${ticket.total.toLocaleString()}</span>
+                        </div>
+                        <div className="mt-3 space-y-1">
+                          <p className="text-sm">
+                            <span className="font-medium">Cliente:</span> {ticket.customerName || 'Sin nombre'}
+                          </p>
+                          <p className="text-sm">
+                            <span className="font-medium">Teléfono:</span> +57{ticket.customerPhone}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          <button
+                            onClick={() => openTicketDetailsModal(ticket)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs"
+                          >
+                            Detalles
+                          </button>
+                          <button
+                            onClick={() => openResendModal(ticket)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs"
+                          >
+                            Reenviar
+                          </button>
+                          <button
+                            onClick={() => deleteTicket(ticket._id)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
