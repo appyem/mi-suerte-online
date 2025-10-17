@@ -921,7 +921,8 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       return;
     }
     try {
-      let url = `${BACKEND_URL}/api/reports?type=${type}&date=${date}`;
+      // ✅ Usar startDate y endDate, NO "date"
+      let url = `${BACKEND_URL}/api/reports?type=${type}&startDate=${reportStartDate}&endDate=${reportEndDate}`;
       if (selectedSeller) url += `&seller=${selectedSeller}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error('Error al generar el reporte');
