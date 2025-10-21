@@ -326,14 +326,43 @@ const App = () => {
 
   const openWhatsApp = (phone, message) => {
     const cleanPhone = phone.replace(/\D/g, '');
-    const waUrl = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(message)}`;
-    const waLink = document.createElement('a');
-    waLink.href = waUrl;
-    waLink.target = '_top';
-    waLink.rel = 'noopener noreferrer';
-    document.body.appendChild(waLink);
-    waLink.click();
-    document.body.removeChild(waLink);
+    const encodedMessage = encodeURIComponent(message);
+  
+    // Primero intentar con el esquema nativo de WhatsApp
+    const nativeUrl = `whatsapp://send?phone=57${cleanPhone}&text=${encodedMessage}`;
+    const webUrl = `https://wa.me/57${cleanPhone}?text=${encodedMessage}`;
+  
+    // Crear enlace nativo
+    const nativeLink = document.createElement('a');
+    nativeLink.href = nativeUrl;
+    nativeLink.style.display = 'none';
+    nativeLink.setAttribute('target', '_top');
+    nativeLink.setAttribute('rel', 'noopener noreferrer');
+  
+  // Crear enlace web como fallback
+    const webLink = document.createElement('a');
+    webLink.href = webUrl;
+    webLink.style.display = 'none';
+    webLink.setAttribute('target', '_blank');
+    webLink.setAttribute('rel', 'noopener noreferrer');
+  
+    document.body.appendChild(nativeLink);
+    document.body.appendChild(webLink);
+  
+  // Intentar abrir la app nativa primero
+    try {
+      nativeLink.click();
+    // Si falla (WhatsApp no instalado), abrir la web en 1 segundo
+      setTimeout(() => {
+        webLink.click();
+      }, 1000);
+    } catch (e) {
+    // Si el esquema nativo falla, abrir directamente la web
+      webLink.click();
+    }
+  
+    document.body.removeChild(nativeLink);
+    document.body.removeChild(webLink);
   };
 
   const openSMS = (phone, message) => {
