@@ -398,39 +398,59 @@ app.get('/api/lottery-results', async (req, res) => {
   }
 });
 
-// 🔴 NUEVA RUTA: Verificar tickets ganadores (usa la API real)
+// 🔴 NUEVA RUTA: Verificar tickets ganadores (CORREGIDA)
 app.get('/api/winning-tickets', async (req, res) => {
   try {
-// 1. Calcular "ayer" en Colombia
+    // ✅ Calculamos "ayer" en Colombia
     const todayInColombia = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
     const todayDate = new Date(todayInColombia);
     const yesterdayDate = new Date(todayDate);
     yesterdayDate.setDate(todayDate.getDate() - 1);
-    const yesterday = yesterdayDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    const yesterday = yesterdayDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
-// 2. Obtener resultados oficiales de AYER
+    // ✅ Obtener resultados oficiales de AYER
     const officialResults = await fetchOfficialResults(yesterday);
 
-// 3. Calcular rango de fechas para "ayer" en Colombia
+    // ✅ Obtener tickets de AYER
     const start = parseDateToColombia(yesterday);
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
+    const tickets = await Ticket.find({ timestamp: { $gte: start, $lt: end } });
 
-// 4. Obtener todos los tickets de AYER
-    const tickets = await Ticket.find({ timestamp: { $gte: start, $lt: end } });   
+    // ✅ Normalizar nombres para comparación segura
+    const normalizeName = (name) => {
+      if (!name) return '';
+      return name
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // elimina acentos
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^LA\s+/, '') // elimina "LA " al inicio (ej: "LA CARIBEÑA" → "CARIBEÑA")
+        .replace(/(?:CHONTICO|CHONTICO\s+(?:DIA|NOCHE|FESTIVO))/i, 'CHONTICO NOCHE')
+        .replace(/(?:SINUANO|SINUANO\s+(?:DIA|NOCHE|FESTIVO))/i, 'SINUANO NOCHE')
+        .replace(/(?:PAISITA|PAISITA\s+(?:DIA|NOCHE|FESTIVO))/i, 'PAISITA NOCHE')
+        .replace(/(?:FANTASTICA|LA FANTASTICA\s+(?:DIA|NOCHE|FESTIVO))/i, 'FANTASTICA NOCHE')
+        .replace(/(?:CULONA|LA CULONA\s+(?:DIA|NOCHE|FESTIVO))/i, 'CULONA NOCHE')
+        .replace(/(?:CAFETERITO|CAFETERITO\s+(?:TARDE|NOCHE|FESTIVO))/i, 'CAFETERITO NOCHE')
+        .replace(/(?:MOTILON|MOTILÓN\s+(?:TARDE|NOCHE|FESTIVO))/i, 'MOTILON NOCHE')
+        .replace(/(?:DORADO\s+(?:MAÑANA|TARDE|NOCHE|FESTIVO))/i, 'DORADO')
+        .replace(/(?:ASTRO\s+(?:SOL|LUNA))/i, 'ASTRO')
+        .replace(/CARIBEÑA|CARIBEAA/i, 'CARIBEÑA NOCHE');
+    };
 
-    // 4. Verificar coincidencias (2, 3 o 4 cifras al final del número ganador)
     const winningTickets = [];
     for (const ticket of tickets) {
       for (const bet of ticket.bets) {
         const played = bet.number;
         const digits = played.length;
-        
-        // Buscar resultado que coincida con la lotería (ignorar mayúsculas y espacios)
-        const result = officialResults.find(r => 
-          r.lottery.toLowerCase().replace(/\s+/g, '') === bet.lottery.toLowerCase().replace(/\s+/g, '')
-        );
-        
+        const normalizedBetLottery = normalizeName(bet.lottery);
+
+        const result = officialResults.find(r => {
+          const normalizedApiLottery = normalizeName(r.lottery);
+          return normalizedApiLottery === normalizedBetLottery;
+        });
+
         if (result) {
           const lastDigits = result.winningNumber.slice(-digits);
           if (lastDigits === played) {
@@ -438,6 +458,7 @@ app.get('/api/winning-tickets', async (req, res) => {
               ticketId: ticket.ticketId,
               seller: ticket.seller,
               customerPhone: ticket.customerPhone,
+              customerName: ticket.customerName || '', // ✅ Incluir nombre
               lottery: bet.lottery,
               playedNumber: played,
               winningNumber: result.winningNumber,

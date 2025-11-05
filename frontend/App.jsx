@@ -3,6 +3,7 @@
 const App = () => {
   const [userRole, setUserRole] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [initialDataLoading, setInitialDataLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -49,7 +50,7 @@ const App = () => {
   const [selectedTicketDetails, setSelectedTicketDetails] = useState(null);
   
   // 🔴 NUEVO: Estados para resultados y ganadores
-  const [lotteryResults, setLotteryResults] = useState([]);
+  const [lotteryResults, setLotteryResults] = useState(null);
   const [winningTickets, setWinningTickets] = useState([]);
 
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
@@ -77,50 +78,159 @@ const App = () => {
   };
 
   // ✅ ACTUALIZADO: lotterySchedule con horarios oficiales
-  const lotterySchedule = [
-    { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
-    { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
-    { name: 'Dorado Mañana', days: [1,2,3,4,5,6], time: '10:58' },
-    { name: 'Dorado Tarde', days: [1,2,3,4,5,6], time: '15:28' },
-    { name: 'Dorado Noche', days: [0,6], time: '22:15', holidayTime: '19:25', sundayTime: '19:25' },
-    { name: 'Fantástica Día', days: [1,2,3,4,5,6], time: '12:57' },
-    { name: 'Fantástica Noche', days: [1,2,3,4,5,6], time: '20:30' },
-    { name: 'El Samán de la Suerte', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '19:00', sundayTime: '19:00' },
-    { name: 'Paisita Día', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '14:00', sundayTime: '14:00' },
-    { name: 'Paisita Noche', days: [1,2,3,4,5,6], time: '18:00', holidayTime: '20:00', sundayTime: '20:00' },
-    { name: 'Chontico Día', days: [0,1,2,3,4,5,6], time: '13:00', holidayTime: '13:00' },
-    { name: 'Chontico Noche', days: [0,1,2,3,4,5,6], time: '19:00', holidayTime: '20:00', saturdayTime: '22:00', sundayTime: '20:00' },
-    { name: 'Pijao de Oro', days: [0,1,2,3,4,5,6], time: '14:00', holidayTime: '20:00', saturdayTime: '21:00', sundayTime: '22:00' },
-    { name: 'Super Astro Sol', days: [1,2,3,4,5,6], time: '14:30' },
-    { name: 'Super Astro Luna', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-    { name: 'Sinuano Día', days: [1,2,3,4,5,6], time: '14:30', holidayTime: '13:00', sundayTime: '13:00' },
-    { name: 'Sinuano Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-    { name: 'La Caribeña Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
-    { name: 'La Caribeña Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-    { name: 'Motilón Tarde', days: [0,1,2,3,4,5,6], time: '15:00', holidayTime: '15:00' },
-    { name: 'Motilón Noche', days: [0,1,2,3,4,5,6], time: '21:00', holidayTime: '21:00' },
-    { name: 'Cafeterito Tarde', days: [1,2,3,4,5,6], time: '12:00' },
-    { name: 'Cafeterito Noche', days: [0,1,2,3,4,5,6], time: '22:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
-    { name: 'Paisa Lotto', days: [6], time: '22:00' },
-    { name: 'La Culona Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
-    { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
-    { name: 'SuperMillonaria', days: [5], time: '23:00' },
-    { name: 'Lotería de Cundinamarca', days: [1], time: '22:30' },
-    { name: 'Lotería de Tolima', days: [1], time: '23:00' },
-    { name: 'Lotería Cruz Roja', days: [2], time: '22:30' },
-    { name: 'Lotería de Huila', days: [2], time: '22:30' },
-    { name: 'Lotería de Manizales', days: [3], time: '22:30' },
-    { name: 'Lotería del Meta', days: [3], time: '22:30' },
-    { name: 'Lotería del Valle', days: [3], time: '22:30' },
-    { name: 'Lotería Quindío', days: [4], time: '22:30' },
-    { name: 'Lotería de Bogotá', days: [4], time: '22:30' },
-    { name: 'Lotería de Santander', days: [5], time: '23:00' },
-    { name: 'Lotería de Medellín', days: [5], time: '23:00' },
-    { name: 'Lotería Risaralda', days: [5], time: '23:00' },
-    { name: 'Lotería de Boyacá', days: [6], time: '22:40' },
-    { name: 'Lotería de Cauca', days: [6], time: '21:40' },
-    { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' }
+  // ✅ lotterySchedule SINCRO CON API DE RESULTADOS (nombres compatibles)
+const lotterySchedule = [
+  // Usamos EXACTAMENTE los nombres que devuelve la API
+  { name: 'ANTIOQUEÑITA MAÑANA', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
+  { name: 'ANTIOQUEÑITA TARDE', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
+  { name: 'DORADO MAÑANA', days: [1,2,3,4,5,6], time: '10:58' },
+  { name: 'DORADO TARDE', days: [1,2,3,4,5,6], time: '15:28' },
+  { name: 'DORADO NOCHE', days: [0,6], time: '22:15', holidayTime: '19:25', sundayTime: '19:25' },
+  { name: 'FANTASTICA DIA', days: [1,2,3,4,5,6], time: '12:57' },
+  { name: 'FANTASTICA NOCHE', days: [1,2,3,4,5,6], time: '20:30' },
+  { name: 'SAMAN', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '19:00', sundayTime: '19:00' }, // ✅ nombre de API: "SAMAN"
+  { name: 'PAISITA DIA', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '14:00', sundayTime: '14:00' },
+  { name: 'PAISITA NOCHE', days: [1,2,3,4,5,6], time: '18:00', holidayTime: '20:00', sundayTime: '20:00' },
+  { name: 'CHONTICO DIA', days: [0,1,2,3,4,5,6], time: '13:00', holidayTime: '13:00' },
+  { name: 'CHONTICO NOCHE', days: [0,1,2,3,4,5,6], time: '19:00', holidayTime: '20:00', saturdayTime: '22:00', sundayTime: '20:00' },
+  { name: 'PIJAO', days: [0,1,2,3,4,5,6], time: '14:00', holidayTime: '20:00', saturdayTime: '21:00', sundayTime: '22:00' }, // ✅ "PIJAO"
+  { name: 'ASTRO SOL', days: [1,2,3,4,5,6], time: '14:30' },
+  { name: 'ASTRO LUNA', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+  { name: 'SINUANO DIA', days: [1,2,3,4,5,6], time: '14:30', holidayTime: '13:00', sundayTime: '13:00' },
+  { name: 'SINUANO NOCHE', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+  { name: 'CARIBEÑA DIA', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
+  { name: 'CARIBEÑA NOCHE', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+  { name: 'MOTILON TARDE', days: [0,1,2,3,4,5,6], time: '15:00', holidayTime: '15:00' },
+  { name: 'MOTILON NOCHE', days: [0,1,2,3,4,5,6], time: '21:00', holidayTime: '21:00' },
+  { name: 'CAFETERITO TARDE', days: [1,2,3,4,5,6], time: '12:00' },
+  { name: 'CAFETERITO NOCHE', days: [0,1,2,3,4,5,6], time: '22:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
+  { name: 'CULONA DIA', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
+  { name: 'CULONA NOCHE', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
+  // Regionales (una vez por semana)
+  { name: 'PAISITA 3 SABADOS', days: [6], time: '22:00' },
+  { name: 'SUPERMILLONARIA', days: [5], time: '23:00' },
+  { name: 'CUNDINAMARCA', days: [1], time: '22:30' },
+  { name: 'TOLIMA', days: [1], time: '23:00' },
+  { name: 'CRUZ ROJA', days: [2], time: '22:30' },
+  { name: 'HUILA', days: [2], time: '22:30' },
+  { name: 'MANIZALES', days: [3], time: '22:30' },
+  { name: 'META', days: [3], time: '22:30' },
+  { name: 'VALLE', days: [3], time: '22:30' },
+  { name: 'QUINDIO', days: [4], time: '22:30' },
+  { name: 'BOGOTA', days: [4], time: '22:30' },
+  { name: 'SANTANDER', days: [5], time: '23:00' },
+  { name: 'MEDELLIN', days: [5], time: '23:00' },
+  { name: 'RISARALDA', days: [5], time: '23:00' },
+  { name: 'BOYACA', days: [6], time: '22:40' },
+  { name: 'CAUCA', days: [6], time: '21:40' },
+  { name: 'EXTRA DE COLOMBIA', days: [6], time: '23:00' }
+].filter(lottery => {
+  // Aseguramos compatibilidad: solo loterías que existen en la API
+  const validNames = [
+    "ANTIOQUEÑITA MAÑANA FESTIVO",
+    "ANTIOQUEÑITA TARDE FESTIVO",
+    "CARIBEÑA DIA FESTIVO",
+    "CHONTICO DIA FESTIVO",
+    "CULONA DIA FESTIVO",
+    "MOTILON DIA",
+    "PAISITA DIA FESTIVO",
+    "SAMAN FESTIVO",
+    "SINUANO DIA FESTIVO",
+    "ANTIOQUEÑITA FESTIVA MAÑANA",
+    "ANTIOQUEÑITA FESTIVA TARDE",
+    "ANTIOQUEÑITA MAÑANA",
+    "ANTIOQUEÑITA TARDE",
+    "AST-LUN 21:50",
+    "AST-SOL 13:50",
+    "ASTRO LUNA",
+    "ASTRO SOL",
+    "BOGOTA",
+    "BOYACA",
+    "CAFETERITO FESTIVO",
+    "CAFETERITO NOCHE",
+    "CAFETERITO NOCHE  FESTIVO",
+    "CAFETERO",
+    "CAFETERO DIA",
+    "CAFETERO NOCHE",
+    "CAFETERO NOCHE FESTIVO",
+    "CARIBEÑA DIA",
+    "CARIBEÑA FESTIVA NOCHE",
+    "CARIBEÑA FESTIVO DIA",
+    "CARIBEÑA NOCHE",
+    "CARIBEÑA NOCHE FESTIVO",
+    "CAUCA",
+    "CHONTICO",
+    "CHONTICO DIA",
+    "CHONTICO FESTIVO",
+    "CHONTICO FESTIVO DIA",
+    "CHONTICO NOCHE",
+    "CHONTICO NOCHE FESTIVO",
+    "CHONTICO NOCHE JUEVES",
+    "CRUZ ROJA",
+    "CULONA",
+    "CULONA DIA",
+    "CULONA FESTIVO",
+    "CULONA FESTIVO DIA",
+    "CULONA FESTIVO NOCHE",
+    "CULONA NOCHE",
+    "CULONA NOCHE FESTIVO",
+    "CUNDINAMARCA",
+    "DORADO",
+    "DORADO FESTIVO",
+    "DORADO MAÑANA",
+    "DORADO NOCHE",
+    "DORADO NOCHE FESTIVO",
+    "DORADO TARDE",
+    "EXTRA CRUZ ROJA",
+    "EXTRA DE COLOMBIA",
+    "FANTASTICA DIA",
+    "FANTASTICA NOCHE",
+    "FANTASTICA NOCHE FESTIVO",
+    "HUILA",
+    "LA FANTASTICA DIA",
+    "LA FANTASTICA FESTIVO",
+    "LA FANTASTICA NOCHE",
+    "LA FANTASTICA NOCHE  FESTIVO",
+    "MANIZALES",
+    "MEDELLIN",
+    "META",
+    "MOTILON",
+    "MOTILON FESTIVO",
+    "MOTILON NOCHE",
+    "PAISITA 3 SABADOS",
+    "PAISITA DIA",
+    "PAISITA FESTIVO",
+    "PAISITA FESTIVO DIA",
+    "PAISITA FESTIVO NOCHE",
+    "PAISITA NOCHE",
+    "PAISITA NOCHE FESTIVO",
+    "PIJAO",
+    "PIJAO FESTIVO",
+    "PIJAO NOCHE FESTIVO",
+    "QUINDIO",
+    "RISARALDA",
+    "SAMAN",
+    "SAMANFESTIVO",
+    "SANTANDER",
+    "SINUANO DIA",
+    "SINUANO FESTIVO DIA",
+    "SINUANO FESTIVO NOCHE",
+    "SINUANO NOCHE",
+    "SINUANO NOCHE FESTIVO",
+    "SORTEO EXTRA CAUCA",
+    "SORTEO EXTRA CRUZROJA-VALLE",
+    "SORTEO EXTRA DE BOGOTA",
+    "SORTEO EXTRA DE BOYACA",
+    "SORTEO EXTRA DE MANIZALES",
+    "SORTEO EXTRA DEL TOLIMA",
+    "SORTEO EXTRA SANTANDER",
+    "SUPER EXTRA MEDELLIN",
+    "SUPER EXTRA NAVIDAD MEDELLIN",
+    "TOLIMA",
+    "VALLE"
   ];
+  return validNames.includes(lottery.name);
+});
 
   const isHoliday = () => {
     const holidays = [
@@ -682,17 +792,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
-  const loadSellers = async () => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/sellers`);
-      if (response.ok) {
-        const sellersData = await response.json();
-        setSellers(sellersData);
-      }
-    } catch (error) {
-      console.error('Error al cargar vendedores:', error);
-    }
-  };
+  
 
   const loadTickets = async () => {
     try {
@@ -776,19 +876,60 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   useEffect(() => {
-    if (userRole === 'admin') {
-      loadSellers();
-      loadTickets();
-      loadPayments();
-      loadLotteryResults();    // ✅ NUEVO
-      loadWinningTickets();    // ✅ NUEVO
-    } else if (userRole === 'seller') {
-      loadSellers();
-      loadTickets();
-      loadLotteryResults();    // ✅ NUEVO
-      loadWinningTickets();    // ✅ NUEVO
+  if (!userRole || !currentUser) return;
+
+  setInitialDataLoading(true);
+
+  const loadInitialData = async () => {
+    try {
+      const sellersPromise = fetch(`${BACKEND_URL}/api/sellers`).then(r => r.json());
+
+      const today = getColombiaDate();
+      const ticketsPromise = fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`).then(r => r.json());
+
+      const resultsPromise = fetch(`${BACKEND_URL}/api/lottery-results?date=${getColombiaDate()}`).then(r => r.json());
+      const winnersPromise = fetch(`${BACKEND_URL}/api/winning-tickets`).then(r => r.json());
+
+      const [sellersData, ticketsData, resultsData, winnersData] = await Promise.all([
+        sellersPromise,
+        ticketsPromise,
+        resultsPromise,
+        winnersPromise
+      ]);
+
+      setSellers(sellersData);
+      setLotteryResults(resultsData);
+      setWinningTickets(winnersData);
+
+      const todayTicketsFromDB = ticketsData
+        .filter(t => {
+          const ticketDateColombia = new Date(t.timestamp).toLocaleDateString('sv-SE', {
+            timeZone: 'America/Bogota'
+          });
+          return ticketDateColombia === today;
+        })
+        .map(t => ({ ...t, customerName: t.customerName || '' }));
+
+      setTodayTickets(todayTicketsFromDB);
+
+      if (userRole === 'admin') {
+        const paymentsResp = await fetch(`${BACKEND_URL}/api/payments`);
+        const paymentsData = await paymentsResp.json();
+        setPayments(paymentsData);
+      }
+
+      // Nota: NO se carga `tickets` completo (solo todayTickets)
+      // porque ralentiza la UI innecesariamente al inicio
+    } catch (error) {
+      console.error('Error al cargar datos iniciales:', error);
+      alert('Error al cargar la información inicial. Verifique su conexión.');
+    } finally {
+      setInitialDataLoading(false);
     }
-  }, [userRole]);
+  };
+
+  loadInitialData();
+}, [userRole, currentUser]);
 
   const openResendModal = (ticket) => {
     setResendTicketData({
@@ -1008,6 +1149,18 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
     window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
+  // 👇 Mostrar cargando después del login pero antes de que se muestre el panel
+  if (!showLogin && (userRole === 'admin' || userRole === 'seller') && initialDataLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-700">Cargando su panel, por favor espere...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (showLogin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -1053,11 +1206,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
   if (userRole === 'admin') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel Administrador</h1>
+              <h1 className="text-2xl font-bold text-indigo-800">🎰 Mi Suerte Online - Panel Administrador</h1>
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Bienvenido, {currentUser.username}</span>
                 <button
@@ -1100,7 +1253,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           </div>
 
           {/* Contenido principal */}
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-4 sm:p-6 border border-teal-100">
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -1320,9 +1473,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Resultados */}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
-              {lotteryResults.length === 0 ? (
+              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de Ayer</h2>
+              {lotteryResults === null ? (
                 <p className="text-gray-500">Cargando resultados...</p>
+              ) : lotteryResults.length === 0 ? (
+                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
@@ -1339,7 +1494,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Ganadores */}
           {activeTab === 'winners' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
+              <h2 className="text-xl font-bold text-amber-700 mb-4">🏆 Tickets Ganadores de Hoy</h2>
               {winningTickets.length === 0 ? (
                 <p className="text-gray-500">No hay tickets ganadores hoy.</p>
               ) : (
@@ -1363,7 +1518,9 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           <td className="px-4 py-3 text-green-700 font-bold">{win.playedNumber}</td>
                           <td className="px-4 py-3 text-blue-700 font-mono">{win.winningNumber}</td>
                           <td className="px-4 py-3">{win.seller}</td>
-                          <td className="px-4 py-3">+57{win.customerPhone}</td>
+                          <td className="px-4 py-3">
+                            {win.customerName || 'Sin nombre'} • +57{win.customerPhone}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1488,11 +1645,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
     const commissionAmount = Math.round(totalSalesToday * commissionRate / 100);
     const netAmount = totalSalesToday - commissionAmount;
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-cyan-50">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel de Venta</h1>
+              <h1 className="text-2xl font-bold text-teal-700">🎟️ Mi Suerte Online - Panel de Venta</h1>
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Vendedor: {currentUser.name || currentUser.username}</span>
                 <button
@@ -1825,17 +1982,19 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Resultados para vendedor */}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
-              {lotteryResults.length === 0 ? (
+              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de Ayer</h2>
+              {lotteryResults === null ? (
                 <p className="text-gray-500">Cargando resultados...</p>
+              ) : lotteryResults.length === 0 ? (
+                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
                     <div key={i} className="border border-green-200 rounded-lg p-4 bg-green-50">
-                      <p className="font-bold text-green-800">{result.lottery}</p>
-                      <p className="text-2xl font-mono text-green-700 mt-2">{result.winningNumber}</p>
-                      <p className="text-sm text-gray-600">Fecha: {result.date}</p>
-                    </div>
+                     <p className="font-bold text-green-800">{result.lottery}</p>
+                     <p className="text-2xl font-mono text-green-700 mt-2">{result.winningNumber}</p>
+                     <p className="text-sm text-gray-600">Fecha: {result.date}</p>
+                  </div>
                   ))}
                 </div>
               )}
@@ -1844,7 +2003,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Ganadores para vendedor */}
           {activeTab === 'winners' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
+              <h2 className="text-xl font-bold text-amber-700 mb-4">🏆 Tickets Ganadores de Hoy</h2>
               {winningTickets.length === 0 ? (
                 <p className="text-gray-500">No hay tickets ganadores hoy.</p>
               ) : (
@@ -1868,7 +2027,9 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             <td className="px-4 py-3">{win.lottery}</td>
                             <td className="px-4 py-3 text-green-700 font-bold">{win.playedNumber}</td>
                             <td className="px-4 py-3 text-blue-700 font-mono">{win.winningNumber}</td>
-                            <td className="px-4 py-3">+57{win.customerPhone}</td>
+                            <td className="px-4 py-3">
+                              {win.customerName || 'Sin nombre'} • +57{win.customerPhone}
+                            </td>
                           </tr>
                         ))}
                     </tbody>
