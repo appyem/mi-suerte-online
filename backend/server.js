@@ -360,7 +360,7 @@ const fetchOfficialResults = async (date = null) => {
     
     const url = `https://api-resultadosloterias.com/api/results/${targetDate}`;
     
-    const response = await axios.get(url, { timeout: 5000 });
+    const response = await axios.get(url, { timeout: 15000 });
     
     if (response.data.status === 'success') {
       return response.data.data.map(item => ({
