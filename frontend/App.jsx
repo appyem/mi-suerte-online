@@ -1473,11 +1473,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Resultados */}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de Ayer</h2>
+              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de hoy</h2>
               {lotteryResults === null ? (
                 <p className="text-gray-500">Cargando resultados...</p>
               ) : lotteryResults.length === 0 ? (
-                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
+                <p className="text-gray-500">No hay resultados disponibles para hoy.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
@@ -1982,11 +1982,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Resultados para vendedor */}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de Ayer</h2>
+              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de Hoy</h2>
               {lotteryResults === null ? (
                 <p className="text-gray-500">Cargando resultados...</p>
               ) : lotteryResults.length === 0 ? (
-                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
+                <p className="text-gray-500">No hay resultados disponibles para hoy.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
