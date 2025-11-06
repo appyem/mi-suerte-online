@@ -50,7 +50,7 @@ const App = () => {
   const [selectedTicketDetails, setSelectedTicketDetails] = useState(null);
   
   // 🔴 NUEVO: Estados para resultados y ganadores
-  const [lotteryResults, setLotteryResults] = useState(null);
+  const [lotteryResults, setLotteryResults] = useState([]);
   const [winningTickets, setWinningTickets] = useState([]);
 
   const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
@@ -78,159 +78,50 @@ const App = () => {
   };
 
   // ✅ ACTUALIZADO: lotterySchedule con horarios oficiales
-  // ✅ lotterySchedule SINCRO CON API DE RESULTADOS (nombres compatibles)
-const lotterySchedule = [
-  // Usamos EXACTAMENTE los nombres que devuelve la API
-  { name: 'ANTIOQUEÑITA MAÑANA', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
-  { name: 'ANTIOQUEÑITA TARDE', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
-  { name: 'DORADO MAÑANA', days: [1,2,3,4,5,6], time: '10:58' },
-  { name: 'DORADO TARDE', days: [1,2,3,4,5,6], time: '15:28' },
-  { name: 'DORADO NOCHE', days: [0,6], time: '22:15', holidayTime: '19:25', sundayTime: '19:25' },
-  { name: 'FANTASTICA DIA', days: [1,2,3,4,5,6], time: '12:57' },
-  { name: 'FANTASTICA NOCHE', days: [1,2,3,4,5,6], time: '20:30' },
-  { name: 'SAMAN', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '19:00', sundayTime: '19:00' }, // ✅ nombre de API: "SAMAN"
-  { name: 'PAISITA DIA', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '14:00', sundayTime: '14:00' },
-  { name: 'PAISITA NOCHE', days: [1,2,3,4,5,6], time: '18:00', holidayTime: '20:00', sundayTime: '20:00' },
-  { name: 'CHONTICO DIA', days: [0,1,2,3,4,5,6], time: '13:00', holidayTime: '13:00' },
-  { name: 'CHONTICO NOCHE', days: [0,1,2,3,4,5,6], time: '19:00', holidayTime: '20:00', saturdayTime: '22:00', sundayTime: '20:00' },
-  { name: 'PIJAO', days: [0,1,2,3,4,5,6], time: '14:00', holidayTime: '20:00', saturdayTime: '21:00', sundayTime: '22:00' }, // ✅ "PIJAO"
-  { name: 'ASTRO SOL', days: [1,2,3,4,5,6], time: '14:30' },
-  { name: 'ASTRO LUNA', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-  { name: 'SINUANO DIA', days: [1,2,3,4,5,6], time: '14:30', holidayTime: '13:00', sundayTime: '13:00' },
-  { name: 'SINUANO NOCHE', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-  { name: 'CARIBEÑA DIA', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
-  { name: 'CARIBEÑA NOCHE', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-  { name: 'MOTILON TARDE', days: [0,1,2,3,4,5,6], time: '15:00', holidayTime: '15:00' },
-  { name: 'MOTILON NOCHE', days: [0,1,2,3,4,5,6], time: '21:00', holidayTime: '21:00' },
-  { name: 'CAFETERITO TARDE', days: [1,2,3,4,5,6], time: '12:00' },
-  { name: 'CAFETERITO NOCHE', days: [0,1,2,3,4,5,6], time: '22:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
-  { name: 'CULONA DIA', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
-  { name: 'CULONA NOCHE', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
-  // Regionales (una vez por semana)
-  { name: 'PAISITA 3 SABADOS', days: [6], time: '22:00' },
-  { name: 'SUPERMILLONARIA', days: [5], time: '23:00' },
-  { name: 'CUNDINAMARCA', days: [1], time: '22:30' },
-  { name: 'TOLIMA', days: [1], time: '23:00' },
-  { name: 'CRUZ ROJA', days: [2], time: '22:30' },
-  { name: 'HUILA', days: [2], time: '22:30' },
-  { name: 'MANIZALES', days: [3], time: '22:30' },
-  { name: 'META', days: [3], time: '22:30' },
-  { name: 'VALLE', days: [3], time: '22:30' },
-  { name: 'QUINDIO', days: [4], time: '22:30' },
-  { name: 'BOGOTA', days: [4], time: '22:30' },
-  { name: 'SANTANDER', days: [5], time: '23:00' },
-  { name: 'MEDELLIN', days: [5], time: '23:00' },
-  { name: 'RISARALDA', days: [5], time: '23:00' },
-  { name: 'BOYACA', days: [6], time: '22:40' },
-  { name: 'CAUCA', days: [6], time: '21:40' },
-  { name: 'EXTRA DE COLOMBIA', days: [6], time: '23:00' }
-].filter(lottery => {
-  // Aseguramos compatibilidad: solo loterías que existen en la API
-  const validNames = [
-    "ANTIOQUEÑITA MAÑANA FESTIVO",
-    "ANTIOQUEÑITA TARDE FESTIVO",
-    "CARIBEÑA DIA FESTIVO",
-    "CHONTICO DIA FESTIVO",
-    "CULONA DIA FESTIVO",
-    "MOTILON DIA",
-    "PAISITA DIA FESTIVO",
-    "SAMAN FESTIVO",
-    "SINUANO DIA FESTIVO",
-    "ANTIOQUEÑITA FESTIVA MAÑANA",
-    "ANTIOQUEÑITA FESTIVA TARDE",
-    "ANTIOQUEÑITA MAÑANA",
-    "ANTIOQUEÑITA TARDE",
-    "AST-LUN 21:50",
-    "AST-SOL 13:50",
-    "ASTRO LUNA",
-    "ASTRO SOL",
-    "BOGOTA",
-    "BOYACA",
-    "CAFETERITO FESTIVO",
-    "CAFETERITO NOCHE",
-    "CAFETERITO NOCHE  FESTIVO",
-    "CAFETERO",
-    "CAFETERO DIA",
-    "CAFETERO NOCHE",
-    "CAFETERO NOCHE FESTIVO",
-    "CARIBEÑA DIA",
-    "CARIBEÑA FESTIVA NOCHE",
-    "CARIBEÑA FESTIVO DIA",
-    "CARIBEÑA NOCHE",
-    "CARIBEÑA NOCHE FESTIVO",
-    "CAUCA",
-    "CHONTICO",
-    "CHONTICO DIA",
-    "CHONTICO FESTIVO",
-    "CHONTICO FESTIVO DIA",
-    "CHONTICO NOCHE",
-    "CHONTICO NOCHE FESTIVO",
-    "CHONTICO NOCHE JUEVES",
-    "CRUZ ROJA",
-    "CULONA",
-    "CULONA DIA",
-    "CULONA FESTIVO",
-    "CULONA FESTIVO DIA",
-    "CULONA FESTIVO NOCHE",
-    "CULONA NOCHE",
-    "CULONA NOCHE FESTIVO",
-    "CUNDINAMARCA",
-    "DORADO",
-    "DORADO FESTIVO",
-    "DORADO MAÑANA",
-    "DORADO NOCHE",
-    "DORADO NOCHE FESTIVO",
-    "DORADO TARDE",
-    "EXTRA CRUZ ROJA",
-    "EXTRA DE COLOMBIA",
-    "FANTASTICA DIA",
-    "FANTASTICA NOCHE",
-    "FANTASTICA NOCHE FESTIVO",
-    "HUILA",
-    "LA FANTASTICA DIA",
-    "LA FANTASTICA FESTIVO",
-    "LA FANTASTICA NOCHE",
-    "LA FANTASTICA NOCHE  FESTIVO",
-    "MANIZALES",
-    "MEDELLIN",
-    "META",
-    "MOTILON",
-    "MOTILON FESTIVO",
-    "MOTILON NOCHE",
-    "PAISITA 3 SABADOS",
-    "PAISITA DIA",
-    "PAISITA FESTIVO",
-    "PAISITA FESTIVO DIA",
-    "PAISITA FESTIVO NOCHE",
-    "PAISITA NOCHE",
-    "PAISITA NOCHE FESTIVO",
-    "PIJAO",
-    "PIJAO FESTIVO",
-    "PIJAO NOCHE FESTIVO",
-    "QUINDIO",
-    "RISARALDA",
-    "SAMAN",
-    "SAMANFESTIVO",
-    "SANTANDER",
-    "SINUANO DIA",
-    "SINUANO FESTIVO DIA",
-    "SINUANO FESTIVO NOCHE",
-    "SINUANO NOCHE",
-    "SINUANO NOCHE FESTIVO",
-    "SORTEO EXTRA CAUCA",
-    "SORTEO EXTRA CRUZROJA-VALLE",
-    "SORTEO EXTRA DE BOGOTA",
-    "SORTEO EXTRA DE BOYACA",
-    "SORTEO EXTRA DE MANIZALES",
-    "SORTEO EXTRA DEL TOLIMA",
-    "SORTEO EXTRA SANTANDER",
-    "SUPER EXTRA MEDELLIN",
-    "SUPER EXTRA NAVIDAD MEDELLIN",
-    "TOLIMA",
-    "VALLE"
+  const lotterySchedule = [
+    { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
+    { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
+    { name: 'Dorado Mañana', days: [1,2,3,4,5,6], time: '10:58' },
+    { name: 'Dorado Tarde', days: [1,2,3,4,5,6], time: '15:28' },
+    { name: 'Dorado Noche', days: [0,6], time: '22:15', holidayTime: '19:25', sundayTime: '19:25' },
+    { name: 'Fantástica Día', days: [1,2,3,4,5,6], time: '12:57' },
+    { name: 'Fantástica Noche', days: [1,2,3,4,5,6], time: '20:30' },
+    { name: 'El Samán de la Suerte', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '19:00', sundayTime: '19:00' },
+    { name: 'Paisita Día', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '14:00', sundayTime: '14:00' },
+    { name: 'Paisita Noche', days: [1,2,3,4,5,6], time: '18:00', holidayTime: '20:00', sundayTime: '20:00' },
+    { name: 'Chontico Día', days: [0,1,2,3,4,5,6], time: '13:00', holidayTime: '13:00' },
+    { name: 'Chontico Noche', days: [0,1,2,3,4,5,6], time: '19:00', holidayTime: '20:00', saturdayTime: '22:00', sundayTime: '20:00' },
+    { name: 'Pijao de Oro', days: [0,1,2,3,4,5,6], time: '14:00', holidayTime: '20:00', saturdayTime: '21:00', sundayTime: '22:00' },
+    { name: 'Super Astro Sol', days: [1,2,3,4,5,6], time: '14:30' },
+    { name: 'Super Astro Luna', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+    { name: 'Sinuano Día', days: [1,2,3,4,5,6], time: '14:30', holidayTime: '13:00', sundayTime: '13:00' },
+    { name: 'Sinuano Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+    { name: 'La Caribeña Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
+    { name: 'La Caribeña Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+    { name: 'Motilón Tarde', days: [0,1,2,3,4,5,6], time: '15:00', holidayTime: '15:00' },
+    { name: 'Motilón Noche', days: [0,1,2,3,4,5,6], time: '21:00', holidayTime: '21:00' },
+    { name: 'Cafeterito Tarde', days: [1,2,3,4,5,6], time: '12:00' },
+    { name: 'Cafeterito Noche', days: [0,1,2,3,4,5,6], time: '22:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
+    { name: 'Paisa Lotto', days: [6], time: '22:00' },
+    { name: 'La Culona Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
+    { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
+    { name: 'SuperMillonaria', days: [5], time: '23:00' },
+    { name: 'Lotería de Cundinamarca', days: [1], time: '22:30' },
+    { name: 'Lotería de Tolima', days: [1], time: '23:00' },
+    { name: 'Lotería Cruz Roja', days: [2], time: '22:30' },
+    { name: 'Lotería de Huila', days: [2], time: '22:30' },
+    { name: 'Lotería de Manizales', days: [3], time: '22:30' },
+    { name: 'Lotería del Meta', days: [3], time: '22:30' },
+    { name: 'Lotería del Valle', days: [3], time: '22:30' },
+    { name: 'Lotería Quindío', days: [4], time: '22:30' },
+    { name: 'Lotería de Bogotá', days: [4], time: '22:30' },
+    { name: 'Lotería de Santander', days: [5], time: '23:00' },
+    { name: 'Lotería de Medellín', days: [5], time: '23:00' },
+    { name: 'Lotería Risaralda', days: [5], time: '23:00' },
+    { name: 'Lotería de Boyacá', days: [6], time: '22:40' },
+    { name: 'Lotería de Cauca', days: [6], time: '21:40' },
+    { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' }
   ];
-  return validNames.includes(lottery.name);
-});
 
   const isHoliday = () => {
     const holidays = [
@@ -792,7 +683,17 @@ Tiquete #${index + 1}: ${ticket.ticketId}
     }
   };
 
-  
+  const loadSellers = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/sellers`);
+      if (response.ok) {
+        const sellersData = await response.json();
+        setSellers(sellersData);
+      }
+    } catch (error) {
+      console.error('Error al cargar vendedores:', error);
+    }
+  };
 
   const loadTickets = async () => {
     try {
@@ -882,11 +783,14 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 
   const loadInitialData = async () => {
     try {
+      // Cargar vendedores siempre (rápido)
       const sellersPromise = fetch(`${BACKEND_URL}/api/sellers`).then(r => r.json());
 
+      // Cargar tickets del día actual (más ligero que todos)
       const today = getColombiaDate();
       const ticketsPromise = fetch(`${BACKEND_URL}/api/tickets?date=${today}&seller=${currentUser.username}`).then(r => r.json());
 
+      // Cargar otros datos en paralelo
       const resultsPromise = fetch(`${BACKEND_URL}/api/lottery-results?date=${getColombiaDate()}`).then(r => r.json());
       const winnersPromise = fetch(`${BACKEND_URL}/api/winning-tickets`).then(r => r.json());
 
@@ -901,6 +805,7 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       setLotteryResults(resultsData);
       setWinningTickets(winnersData);
 
+      // Filtrar tickets del día (consistente con hora de Colombia)
       const todayTicketsFromDB = ticketsData
         .filter(t => {
           const ticketDateColombia = new Date(t.timestamp).toLocaleDateString('sv-SE', {
@@ -912,14 +817,15 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 
       setTodayTickets(todayTicketsFromDB);
 
+      // Solo admin carga pagos
       if (userRole === 'admin') {
         const paymentsResp = await fetch(`${BACKEND_URL}/api/payments`);
         const paymentsData = await paymentsResp.json();
         setPayments(paymentsData);
       }
 
-      // Nota: NO se carga `tickets` completo (solo todayTickets)
-      // porque ralentiza la UI innecesariamente al inicio
+      // Cargar TODO los tickets (solo si es necesario para reportes, pero no al inicio)
+      // Esto lo dejamos para cuando se abra la pestaña de reportes, no al login
     } catch (error) {
       console.error('Error al cargar datos iniciales:', error);
       alert('Error al cargar la información inicial. Verifique su conexión.');
@@ -1474,10 +1380,8 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
-              {lotteryResults === null ? (
+              {lotteryResults.length === 0 ? (
                 <p className="text-gray-500">Cargando resultados...</p>
-              ) : lotteryResults.length === 0 ? (
-                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
@@ -1981,18 +1885,16 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
-              {lotteryResults === null ? (
+              {lotteryResults.length === 0 ? (
                 <p className="text-gray-500">Cargando resultados...</p>
-              ) : lotteryResults.length === 0 ? (
-                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
                     <div key={i} className="border border-green-200 rounded-lg p-4 bg-green-50">
-                     <p className="font-bold text-green-800">{result.lottery}</p>
-                     <p className="text-2xl font-mono text-green-700 mt-2">{result.winningNumber}</p>
-                     <p className="text-sm text-gray-600">Fecha: {result.date}</p>
-                  </div>
+                      <p className="font-bold text-green-800">{result.lottery}</p>
+                      <p className="text-2xl font-mono text-green-700 mt-2">{result.winningNumber}</p>
+                      <p className="text-sm text-gray-600">Fecha: {result.date}</p>
+                    </div>
                   ))}
                 </div>
               )}
