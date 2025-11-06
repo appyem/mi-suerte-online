@@ -1206,11 +1206,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
   if (userRole === 'admin') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-indigo-800">🎰 Mi Suerte Online - Panel Administrador</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel Administrador</h1>
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Bienvenido, {currentUser.username}</span>
                 <button
@@ -1253,7 +1253,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           </div>
 
           {/* Contenido principal */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-4 sm:p-6 border border-teal-100">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -1473,11 +1473,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Resultados */}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de hoy</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
               {lotteryResults === null ? (
                 <p className="text-gray-500">Cargando resultados...</p>
               ) : lotteryResults.length === 0 ? (
-                <p className="text-gray-500">No hay resultados disponibles para hoy.</p>
+                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
@@ -1494,7 +1494,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Ganadores */}
           {activeTab === 'winners' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-amber-700 mb-4">🏆 Tickets Ganadores de Hoy</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
               {winningTickets.length === 0 ? (
                 <p className="text-gray-500">No hay tickets ganadores hoy.</p>
               ) : (
@@ -1518,9 +1518,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           <td className="px-4 py-3 text-green-700 font-bold">{win.playedNumber}</td>
                           <td className="px-4 py-3 text-blue-700 font-mono">{win.winningNumber}</td>
                           <td className="px-4 py-3">{win.seller}</td>
-                          <td className="px-4 py-3">
-                            {win.customerName || 'Sin nombre'} • +57{win.customerPhone}
-                          </td>
+                          <td className="px-4 py-3">+57{win.customerPhone}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1645,11 +1643,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
     const commissionAmount = Math.round(totalSalesToday * commissionRate / 100);
     const netAmount = totalSalesToday - commissionAmount;
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-cyan-50">
+      <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-teal-700">🎟️ Mi Suerte Online - Panel de Venta</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel de Venta</h1>
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Vendedor: {currentUser.name || currentUser.username}</span>
                 <button
@@ -1982,11 +1980,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Resultados para vendedor */}
           {activeTab === 'results' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-green-700 mb-4">🎲 Números Ganadores de Hoy</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
               {lotteryResults === null ? (
                 <p className="text-gray-500">Cargando resultados...</p>
               ) : lotteryResults.length === 0 ? (
-                <p className="text-gray-500">No hay resultados disponibles para hoy.</p>
+                <p className="text-gray-500">No hay resultados disponibles para ayer.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {lotteryResults.map((result, i) => (
@@ -2003,7 +2001,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           {/* 🔴 NUEVO: Ganadores para vendedor */}
           {activeTab === 'winners' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-amber-700 mb-4">🏆 Tickets Ganadores de Hoy</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
               {winningTickets.length === 0 ? (
                 <p className="text-gray-500">No hay tickets ganadores hoy.</p>
               ) : (
@@ -2027,9 +2025,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             <td className="px-4 py-3">{win.lottery}</td>
                             <td className="px-4 py-3 text-green-700 font-bold">{win.playedNumber}</td>
                             <td className="px-4 py-3 text-blue-700 font-mono">{win.winningNumber}</td>
-                            <td className="px-4 py-3">
-                              {win.customerName || 'Sin nombre'} • +57{win.customerPhone}
-                            </td>
+                            <td className="px-4 py-3">+57{win.customerPhone}</td>
                           </tr>
                         ))}
                     </tbody>
