@@ -1657,7 +1657,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             }}
                             className="mr-2"
                           />
-                          <span className="text-sm">{lottery.name}</span>
+                          <span className="text-sm text-gray-800">{lottery.name}</span>
                         </label>
                       ))}
                     </div>
