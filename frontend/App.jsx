@@ -1578,7 +1578,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     <select
                       value={currentBet.lottery}
                       onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                       disabled={lotteries.filter(l => l.active).length === 0}
                     >
                       <option value="">Seleccione una lotería</option>
@@ -1602,7 +1602,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           number: currentBet.number.slice(0, parseInt(newDigits))
                         });
                       }}
-                      className="b-full px-4 py-3 border border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     >
                       <option value="2">2 Cifras</option>
                       <option value="3">3 Cifras</option>
@@ -1615,7 +1615,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       type="text"
                       value={currentBet.number}
                       onChange={(e) => handleNumberChange(e.target.value.replace(/\D/g, ''))}
-                      className="b-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                       placeholder={`Ej: ${'12'.substring(0, parseInt(currentBet.digits))}`}
                       maxLength={parseInt(currentBet.digits)}
                     />
@@ -1627,7 +1627,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       type="number"
                       value={currentBet.amount}
                       onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                       placeholder="Ej: 5000"
                     />
                     {parseInt(currentBet.amount) > 20000 && (
@@ -1668,7 +1668,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       <select
                         value={currentBet.digits}
                         onChange={(e) => setCurrentBet({...currentBet, digits: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                       className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
                       >
                         <option value="2">2 Cifras</option>
                         <option value="3">3 Cifras</option>
@@ -1686,7 +1686,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             setCurrentBet({...currentBet, number: val});
                           }
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
                         placeholder="Ej: 12"
                       />
                     </div>
@@ -1696,7 +1696,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                         type="number"
                         value={currentBet.amount}
                         onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                       className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
                         placeholder="Ej: 2000"
                       />
                     </div>
@@ -1833,7 +1833,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   placeholder="Ej: Juan Pérez"
                 />
               </div>
@@ -1847,7 +1847,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     placeholder="3001234567"
                     maxLength={10}
                   />
@@ -1933,7 +1933,8 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     type="text"
                     value={resendTicketData.customerName}
                     onChange={(e) => setResendTicketData({...resendTicketData, customerName: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+
                     placeholder="Nombre del cliente"
                   />
                 </div>
@@ -1949,7 +1950,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       type="tel"
                       value={resendTicketData.customerPhone}
                       onChange={(e) => setResendTicketData({...resendTicketData, customerPhone: e.target.value.replace(/\D/g, '')})}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                       placeholder="3001234567"
                       maxLength={10}
                     />
