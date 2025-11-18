@@ -505,18 +505,38 @@ app.get('/api/lotteries/today', (req, res) => {
 
   // 🗓️ Función para detectar si una fecha es festivo en Colombia (2025 completo)
   const isHoliday = (date) => {
-    const colombiaDate = new Date(date.toLocaleString("en-US", { timeZone: "America/Bogota" }));
-    const month = (colombiaDate.getMonth() + 1).toString().padStart(2, '0');
-    const day = colombiaDate.getDate().toString().padStart(2, '0');
+    // Convertir a fecha en Colombia
+    const d = new Date(date.toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
     const todayStr = `${month}-${day}`;
 
-    const holidays = [
-      // Festivos fijos
-      '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25',
-      // Festivos trasladados en 2025
-      '03-24', '04-17', '04-18', '05-12', '06-02', '06-09', '07-07', '08-18', '10-13', '11-03', '11-17'
+    // Festivos fijos
+    const fixedHolidays = [
+      '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25'
     ];
-    return holidays.includes(todayStr);
+
+    // Festivos móviles 2025 (según Decreto 2488 de 2023)
+    const movingHolidays2025 = [
+      '03-24', // San José
+      '04-17', // Jueves Santo
+      '04-18', // Viernes Santo
+      '05-12', // Ascensión
+      '06-02', // Corpus Christi
+      '06-09', // Sagrado Corazón
+      '07-07', // San Pedro y San Pablo
+      '08-18', // Batalla de Boyacá
+      '10-13', // Día de la Raza
+      '11-03', // Todos los Santos
+      '11-17'  // Independencia de Cartagena
+    ];
+
+    if (year === 2025) {
+      return fixedHolidays.includes(todayStr) || movingHolidays2025.includes(todayStr);
+    } else {
+      return fixedHolidays.includes(todayStr);
+    }
   };
 
   // Obtener la fecha actual en Colombia
