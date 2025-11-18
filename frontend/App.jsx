@@ -962,7 +962,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
 
   if (userRole === 'admin') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-indigo-900 text-white">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
@@ -1009,7 +1009,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           </div>
 
           {/* Contenido principal */}
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <div className="bg-gradient-to-br from-gray-800 to-emerald-900/30 border border-emerald-500/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-lg shadow-emerald-500/10">
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -1397,11 +1397,13 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
     const commissionAmount = Math.round(totalSalesToday * commissionRate / 100);
     const netAmount = totalSalesToday - commissionAmount;
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-indigo-900 text-white">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-bold text-gray-900">Mi Suerte Online - Panel de Venta</h1>
+              <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-300 drop-shadow-[0_0_8px_rgba(59,130,246,0.7)]">
+  Mi Suerte Online - Panel de Venta
+</h1>
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Vendedor: {currentUser.name || currentUser.username}</span>
                 <button
