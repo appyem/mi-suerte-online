@@ -1547,7 +1547,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {activeTab === 'create' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
               <div className="mb-4 flex space-x-4">
                 <button
@@ -1825,7 +1825,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {activeTab === 'create' && (
-            <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+            <div className="bg-white rounded-xl shadow-sm p-6 mt-6 text-gray-800">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Cliente</h3>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Cliente</label>
