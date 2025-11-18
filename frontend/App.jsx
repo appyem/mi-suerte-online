@@ -52,7 +52,7 @@ const App = () => {
   const [lotteryResults, setLotteryResults] = useState([]);
   const [winningTickets, setWinningTickets] = useState([]);
 
-  const BACKEND_URL = 'http://localhost:5000';
+  const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
 
   // 🔴 NUEVA FUNCIÓN: Eliminar ticket (solo para vendedores)
   const deleteTicket = async (ticketId) => {
