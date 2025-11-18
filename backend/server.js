@@ -481,7 +481,7 @@ app.get('/api/lotteries/today', (req, res) => {
     { name: 'Motilón Tarde', days: [0,1,2,3,4,5,6], time: '15:00', holidayTime: '15:00' },
     { name: 'Motilón Noche', days: [0,1,2,3,4,5,6], time: '21:00', holidayTime: '21:00' },
     { name: 'Cafeterito Tarde', days: [1,2,3,4,5,6], time: '12:00' },
-    { name: 'Cafeterito Noche', days: [0,1,2,3,4,5,6], time: '22:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
+    { name: 'Cafeterito Noche', days: [0,1,2,3,4,5,6], time: '20:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
     { name: 'Paisa Lotto', days: [6], time: '22:00' },
     { name: 'La Culona Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
     { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },

@@ -1012,7 +1012,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           <div className="bg-gradient-to-br from-gray-800 to-emerald-900/30 border border-emerald-500/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-lg shadow-emerald-500/10">
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
                 <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-green-600">
                   ${tickets.filter(t => 
@@ -1020,7 +1020,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
                 </p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
                 <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-blue-600">
                   {tickets.filter(t => 
@@ -1028,11 +1028,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                   ).length}
                 </p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
                 <h3 className="text-sm font-medium text-gray-500">Premios por Pagar</h3>
                 <p className="mt-2 text-3xl font-bold text-orange-600">$0</p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
                 <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
                 <p className="mt-2 text-3xl font-bold text-purple-600">
                   ${tickets.filter(t => 
@@ -1044,7 +1044,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           )}
           {activeTab === 'reports' && (
             <div className="space-y-8">
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Generador de Reportes</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                   <div>
@@ -1103,7 +1103,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {activeTab === 'sellers' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Gestión de Vendedores</h2>
                 <button
@@ -1169,7 +1169,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {activeTab === 'payments' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Pagos a Vendedores</h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -1196,7 +1196,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {activeTab === 'lotteries' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Gestión de Loterías (Hoy)</h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -1228,7 +1228,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           )}
           {/* 🔴 NUEVO: Resultados */}
           {activeTab === 'results' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
               {lotteryResults.length === 0 ? (
                 <p className="text-gray-500">Cargando resultados...</p>
@@ -1247,7 +1247,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           )}
           {/* 🔴 NUEVO: Ganadores */}
           {activeTab === 'winners' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
               {winningTickets.length === 0 ? (
                 <p className="text-gray-500">No hay tickets ganadores hoy.</p>
@@ -1472,7 +1472,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </nav>
           </div>
           {activeTab === 'sales' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Ventas del Día</h2>
               {todayTickets.length > 0 && (
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -1547,7 +1547,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {activeTab === 'create' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Crear Nueva Apuesta</h2>
               <div className="mb-4 flex space-x-4">
                 <button
@@ -1714,7 +1714,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {activeTab === 'close' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Cierre de Caja</h2>
               <p className="text-gray-600 mb-6">Genera reportes de cierre por fechas específicas.</p>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -1735,7 +1735,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           )}
           {/* 🔴 NUEVO: Resultados para vendedor */}
           {activeTab === 'results' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Números Ganadores de Hoy</h2>
               {lotteryResults.length === 0 ? (
                 <p className="text-gray-500">Cargando resultados...</p>
@@ -1754,7 +1754,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
           )}
           {/* 🔴 NUEVO: Ganadores para vendedor */}
           {activeTab === 'winners' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <<div className="bg-white rounded-xl shadow-sm p-6 text-gray-800">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Tickets Ganadores de Hoy</h2>
               {winningTickets.length === 0 ? (
                 <p className="text-gray-500">No hay tickets ganadores hoy.</p>
