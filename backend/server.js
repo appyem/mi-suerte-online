@@ -519,16 +519,20 @@ app.get('/api/lotteries/today', (req, res) => {
     return holidays.includes(todayStr);
   };
 
-  const today = new Date();
+  // Obtener la fecha actual en Colombia
+  const nowInColombia = new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" });
+  const today = new Date(nowInColombia);
+  const todayDayOfWeek = today.getDay();
+
+  // Obtener "ayer" en Colombia
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
   const todayIsHoliday = isHoliday(today);
   const yesterdayWasMondayHoliday = (
-    yesterday.getDay() === 1 && // ayer fue lunes
-    isHoliday(yesterday)       // y fue festivo
+    yesterday.getDay() === 1 && // ayer fue lunes en Colombia
+    isHoliday(yesterday)       // y fue festivo en Colombia
   );
-  const todayDayOfWeek = today.getDay();
 
   const todayLotteries = lotterySchedule
     .map((lottery) => {
