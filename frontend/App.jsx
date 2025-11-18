@@ -1397,7 +1397,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
     const commissionAmount = Math.round(totalSalesToday * commissionRate / 100);
     const netAmount = totalSalesToday - commissionAmount;
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-indigo-900 text-white">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-indigo-900">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
