@@ -455,9 +455,9 @@ app.get('/api/winning-tickets', async (req, res) => {
   }
 });
 
-// 🔴 NUEVA RUTA: Obtener loterías activas HOY en Colombia (con lógica de festivos y traslados)
+// 🔴 NUEVA RUTA: Obtener loterías activas HOY en Colombia (SIN lógica de traslados)
 app.get('/api/lotteries/today', (req, res) => {
-  // 📅 Lista de loterías con sus horarios (CORREGIDO: Tolima a las 23:00)
+  // 📅 Lista de loterías con sus horarios (martes normal)
   const lotterySchedule = [
     { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
     { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
@@ -487,7 +487,7 @@ app.get('/api/lotteries/today', (req, res) => {
     { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
     { name: 'SuperMillonaria', days: [5], time: '23:00' },
     { name: 'Lotería de Cundinamarca', days: [1], time: '22:30' },
-    { name: 'Lotería de Tolima', days: [1], time: '22:30' }, // ✅ CORREGIDO: 23:00 (no 22:30)
+    { name: 'Lotería de Tolima', days: [1], time: '23:00' },
     { name: 'Lotería Cruz Roja', days: [2], time: '22:30' },
     { name: 'Lotería de Huila', days: [2], time: '22:30' },
     { name: 'Lotería de Manizales', days: [3], time: '22:30' },
@@ -503,106 +503,26 @@ app.get('/api/lotteries/today', (req, res) => {
     { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' }
   ];
 
-  // 🗓️ Función robusta para detectar festivos en Colombia (2025 completo)
-  const isHoliday = (date) => {
-    const d = new Date(date.toLocaleString("en-US", { timeZone: "America/Bogota" }));
-    const year = d.getFullYear();
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
-    const todayStr = `${month}-${day}`;
-
-    const fixedHolidays = [
-      '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25'
-    ];
-    const movingHolidays2025 = [
-      '03-24', '04-17', '04-18', '05-12', '06-02', '06-09', '07-07', '08-18', '10-13', '11-03', '11-17'
-    ];
-
-    if (year === 2025) {
-      return fixedHolidays.includes(todayStr) || movingHolidays2025.includes(todayStr);
-    }
-    return fixedHolidays.includes(todayStr);
-  };
-
-  // 🔥 CORRECCIÓN CLAVE: Fechas en zona horaria de Colombia
+  // Obtiene el día de la semana de HOY en Colombia (0 = domingo, 1 = lunes, ..., 2 = martes)
   const nowInColombia = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
-  const today = new Date(nowInColombia);
-  const todayDayOfWeek = today.getDay();
-
-  // Obtener "ayer" en Colombia (CORRECTAMENTE)
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const todayIsHoliday = isHoliday(today);
-  const yesterdayWasMondayHoliday = (yesterday.getDay() === 1 && isHoliday(yesterday));
+  const dayOfWeek = nowInColombia.getDay(); // 2 para martes
 
   const todayLotteries = lotterySchedule
-    .map((lottery) => {
-      const name = lottery.name;
-
-      // ✅ Lógica especial SOLO para Cundinamarca y Tolima (solo se trasladan si el lunes es festivo)
-      if (['Lotería de Cundinamarca', 'Lotería de Tolima'].includes(name)) {
-        // Hoy es lunes festivo → NO juega hoy
-        if (todayDayOfWeek === 1 && todayIsHoliday) {
-          return null;
-        }
-        // Hoy es martes y ayer fue lunes festivo → SÍ juega hoy
-        if (todayDayOfWeek === 2 && yesterdayWasMondayHoliday) {
-          const [h, m] = lottery.time.split(':').map(Number);
-          const now = new Date(nowInColombia);
-          const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-          const lotteryTimeInMinutes = h * 60 + m;
-          const fiveMinutesBefore = lotteryTimeInMinutes - 5;
-          const active = currentTimeInMinutes < fiveMinutesBefore;
-          return { name, time: lottery.time, active };
-        }
-        // Hoy es lunes normal → juega normal
-        if (todayDayOfWeek === 1 && !todayIsHoliday) {
-          const [h, m] = lottery.time.split(':').map(Number);
-          const now = new Date(nowInColombia);
-          const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-          const lotteryTimeInMinutes = h * 60 + m;
-          const fiveMinutesBefore = lotteryTimeInMinutes - 5;
-          const active = currentTimeInMinutes < fiveMinutesBefore;
-          return { name, time: lottery.time, active };
-        }
-        // Cualquier otro día → no juega
-        return null;
+    .map(lottery => {
+      // Si hoy es martes (2), ¿incluye el martes en sus días?
+      if (lottery.days.includes(dayOfWeek)) {
+        const [h, m] = lottery.time.split(':').map(Number);
+        const now = nowInColombia;
+        const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+        const lotteryTimeInMinutes = h * 60 + m;
+        const fiveMinutesBefore = lotteryTimeInMinutes - 5;
+        const active = currentTimeInMinutes < fiveMinutesBefore;
+        return { name: lottery.name, time: lottery.time, active };
       }
-
-      // 🔄 Lógica para el resto (chances y otras tradicionales)
-      let timeStr = null;
-
-      // Sábado con horario especial
-      if (todayDayOfWeek === 6 && lottery.saturdayTime) {
-        timeStr = lottery.saturdayTime;
-      }
-      // Domingo con horario especial
-      else if (todayDayOfWeek === 0 && lottery.sundayTime) {
-        timeStr = lottery.sundayTime;
-      }
-      // Festivo con horario especial → SOLO si HOY es festivo
-      else if (todayIsHoliday && lottery.holidayTime) {
-        timeStr = lottery.holidayTime;
-      }
-      // Día normal → usa horario normal (incluso si ayer fue festivo, los chances NO se trasladan)
-      else if (lottery.days.includes(todayDayOfWeek)) {
-        timeStr = lottery.time;
-      }
-
-      if (!timeStr) return null;
-
-      // ✅ Calcular 'active' usando la hora de Colombia
-      const [h, m] = timeStr.split(':').map(Number);
-      const now = new Date(nowInColombia);
-      const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-      const lotteryTimeInMinutes = h * 60 + m;
-      const fiveMinutesBefore = lotteryTimeInMinutes - 5;
-      const active = currentTimeInMinutes < fiveMinutesBefore;
-
-      return { name: lottery.name, time: timeStr, active };
+      // Si no juega hoy, no se muestra
+      return null;
     })
-    .filter(Boolean);
+    .filter(Boolean); // Elimina nulos
 
   res.json(todayLotteries);
 });
