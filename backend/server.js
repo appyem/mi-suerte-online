@@ -401,22 +401,22 @@ app.get('/api/lottery-results', async (req, res) => {
 // 🔴 NUEVA RUTA: Verificar tickets ganadores (usa la API real)
 app.get('/api/winning-tickets', async (req, res) => {
   try {
-// 1. Calcular "ayer" en Colombia
+    // 1. Calcular "ayer" en Colombia
     const todayInColombia = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
     const todayDate = new Date(todayInColombia);
     const yesterdayDate = new Date(todayDate);
     yesterdayDate.setDate(todayDate.getDate() - 1);
     const yesterday = yesterdayDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-// 2. Obtener resultados oficiales de AYER
+    // 2. Obtener resultados oficiales de AYER
     const officialResults = await fetchOfficialResults(yesterday);
 
-// 3. Calcular rango de fechas para "ayer" en Colombia
+    // 3. Calcular rango de fechas para "ayer" en Colombia
     const start = parseDateToColombia(yesterday);
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
 
-// 4. Obtener todos los tickets de AYER
+    // 4. Obtener todos los tickets de AYER
     const tickets = await Ticket.find({ timestamp: { $gte: start, $lt: end } });   
 
     // 4. Verificar coincidencias (2, 3 o 4 cifras al final del número ganador)
@@ -453,6 +453,160 @@ app.get('/api/winning-tickets', async (req, res) => {
     console.error('Error en /api/winning-tickets:', error);
     res.status(500).json({ error: 'Error al verificar tickets ganadores' });
   }
+});
+
+// 🔴 NUEVA RUTA: Obtener loterías activas HOY en Colombia (con lógica de festivos y traslados)
+app.get('/api/lotteries/today', (req, res) => {
+  // 📅 Lista de loterías con sus horarios
+  const lotterySchedule = [
+    { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
+    { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
+    { name: 'Dorado Mañana', days: [1,2,3,4,5,6], time: '10:58' },
+    { name: 'Dorado Tarde', days: [1,2,3,4,5,6], time: '15:28' },
+    { name: 'Dorado Noche', days: [0,6], time: '22:15', holidayTime: '19:25', sundayTime: '19:25' },
+    { name: 'Fantástica Día', days: [1,2,3,4,5,6], time: '12:57' },
+    { name: 'Fantástica Noche', days: [1,2,3,4,5,6], time: '20:30' },
+    { name: 'El Samán de la Suerte', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '19:00', sundayTime: '19:00' },
+    { name: 'Paisita Día', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '14:00', sundayTime: '14:00' },
+    { name: 'Paisita Noche', days: [1,2,3,4,5,6], time: '18:00', holidayTime: '20:00', sundayTime: '20:00' },
+    { name: 'Chontico Día', days: [0,1,2,3,4,5,6], time: '13:00', holidayTime: '13:00' },
+    { name: 'Chontico Noche', days: [0,1,2,3,4,5,6], time: '19:00', holidayTime: '20:00', saturdayTime: '22:00', sundayTime: '20:00' },
+    { name: 'Pijao de Oro', days: [0,1,2,3,4,5,6], time: '14:00', holidayTime: '20:00', saturdayTime: '21:00', sundayTime: '22:00' },
+    { name: 'Super Astro Sol', days: [1,2,3,4,5,6], time: '14:30' },
+    { name: 'Super Astro Luna', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+    { name: 'Sinuano Día', days: [1,2,3,4,5,6], time: '14:30', holidayTime: '13:00', sundayTime: '13:00' },
+    { name: 'Sinuano Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+    { name: 'La Caribeña Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
+    { name: 'La Caribeña Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
+    { name: 'Motilón Tarde', days: [0,1,2,3,4,5,6], time: '15:00', holidayTime: '15:00' },
+    { name: 'Motilón Noche', days: [0,1,2,3,4,5,6], time: '21:00', holidayTime: '21:00' },
+    { name: 'Cafeterito Tarde', days: [1,2,3,4,5,6], time: '12:00' },
+    { name: 'Cafeterito Noche', days: [0,1,2,3,4,5,6], time: '22:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
+    { name: 'Paisa Lotto', days: [6], time: '22:00' },
+    { name: 'La Culona Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
+    { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
+    { name: 'SuperMillonaria', days: [5], time: '23:00' },
+    { name: 'Lotería de Cundinamarca', days: [1], time: '22:30' },
+    { name: 'Lotería de Tolima', days: [1], time: '22:30' }, // ✅ CORREGIDO: 22:30 (no 23:00)
+    { name: 'Lotería Cruz Roja', days: [2], time: '22:30' },
+    { name: 'Lotería de Huila', days: [2], time: '22:30' },
+    { name: 'Lotería de Manizales', days: [3], time: '22:30' },
+    { name: 'Lotería del Meta', days: [3], time: '22:30' },
+    { name: 'Lotería del Valle', days: [3], time: '22:30' },
+    { name: 'Lotería Quindío', days: [4], time: '22:30' },
+    { name: 'Lotería de Bogotá', days: [4], time: '22:30' },
+    { name: 'Lotería de Santander', days: [5], time: '23:00' },
+    { name: 'Lotería de Medellín', days: [5], time: '23:00' },
+    { name: 'Lotería Risaralda', days: [5], time: '23:00' },
+    { name: 'Lotería de Boyacá', days: [6], time: '22:40' },
+    { name: 'Lotería de Cauca', days: [6], time: '21:40' },
+    { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' }
+  ];
+
+  // 🗓️ Función para detectar si una fecha es festivo en Colombia (2025 completo)
+  const isHoliday = (date) => {
+    const colombiaDate = new Date(date.toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const month = (colombiaDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = colombiaDate.getDate().toString().padStart(2, '0');
+    const todayStr = `${month}-${day}`;
+
+    const holidays = [
+      // Festivos fijos
+      '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25',
+      // Festivos trasladados en 2025
+      '03-24', '04-17', '04-18', '05-12', '06-02', '06-09', '07-07', '08-18', '10-13', '11-03', '11-17'
+    ];
+    return holidays.includes(todayStr);
+  };
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const todayIsHoliday = isHoliday(today);
+  const yesterdayWasMondayHoliday = (
+    yesterday.getDay() === 1 && // ayer fue lunes
+    isHoliday(yesterday)       // y fue festivo
+  );
+  const todayDayOfWeek = today.getDay();
+
+  const todayLotteries = lotterySchedule
+    .map((lottery) => {
+      const name = lottery.name;
+
+      // ✅ Lógica especial para Cundinamarca y Tolima
+      if (['Lotería de Cundinamarca', 'Lotería de Tolima'].includes(name)) {
+        // Hoy es lunes festivo → NO juega hoy (se traslada al martes)
+        if (todayDayOfWeek === 1 && todayIsHoliday) {
+          return null;
+        }
+        // Hoy es martes y ayer fue lunes festivo → SÍ juega hoy
+        if (todayDayOfWeek === 2 && yesterdayWasMondayHoliday) {
+          const [h, m] = lottery.time.split(':').map(Number);
+          const now = new Date();
+          const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+          const lotteryTimeInMinutes = h * 60 + m;
+          const fiveMinutesBefore = lotteryTimeInMinutes - 5;
+          const active = currentTimeInMinutes < fiveMinutesBefore;
+          return { name, time: lottery.time, active };
+        }
+        // Hoy es lunes normal → juega normal
+        if (todayDayOfWeek === 1 && !todayIsHoliday) {
+          const [h, m] = lottery.time.split(':').map(Number);
+          const now = new Date();
+          const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+          const lotteryTimeInMinutes = h * 60 + m;
+          const fiveMinutesBefore = lotteryTimeInMinutes - 5;
+          const active = currentTimeInMinutes < fiveMinutesBefore;
+          return { name, time: lottery.time, active };
+        }
+        // Cualquier otro día → no juega
+        return null;
+      }
+
+      // 🔄 Lógica CORREGIDA para el resto de loterías
+      let timeStr = null;
+
+      // 1. Si es sábado y tiene horario especial → usarlo
+      if (todayDayOfWeek === 6 && lottery.saturdayTime) {
+        timeStr = lottery.saturdayTime;
+      }
+      // 2. Si es domingo y tiene horario especial → usarlo
+      else if (todayDayOfWeek === 0 && lottery.sundayTime) {
+        timeStr = lottery.sundayTime;
+      }
+      // 3. Si es festivo y tiene horario especial para festivos → usarlo
+      else if (todayIsHoliday && lottery.holidayTime) {
+        timeStr = lottery.holidayTime;
+      }
+      // 4. Si juega hoy (ya sea día normal o festivo) → usar su horario normal
+      else if (lottery.days.includes(todayDayOfWeek)) {
+        timeStr = lottery.time;
+      }
+
+      if (!timeStr) return null;
+
+      const [h, m] = timeStr.split(':').map(Number);
+      const now = new Date();
+      const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+      const lotteryTimeInMinutes = h * 60 + m;
+      const fiveMinutesBefore = lotteryTimeInMinutes - 5;
+      const active = currentTimeInMinutes < fiveMinutesBefore;
+
+      return { name: lottery.name, time: timeStr, active };
+    })
+    .filter(Boolean); // Elimina nulls
+
+      console.log("=== DEBUG LOTERÍAS HOY ===");
+      console.log("Fecha actual (servidor):", new Date().toISOString());
+      console.log("Fecha actual (Colombia):", new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" }));
+      console.log("¿Es festivo?", todayIsHoliday);
+      console.log("Día de la semana (0=dom, 1=lun...):", todayDayOfWeek);
+      console.log("Loterías devueltas:", todayLotteries.length);
+      todayLotteries.forEach(l => console.log("✅", l.name, l.time, l.active ? "ACTIVA" : "CERRADA"));
+      console.log("===========================");
+
+  res.json(todayLotteries);
 });
 
 const PORT = process.env.PORT || 5000;

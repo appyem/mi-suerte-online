@@ -52,7 +52,7 @@ const App = () => {
   const [lotteryResults, setLotteryResults] = useState([]);
   const [winningTickets, setWinningTickets] = useState([]);
 
-  const BACKEND_URL = 'https://mi-suerte-online-backend.onrender.com';
+  const BACKEND_URL = 'http://localhost:5000';
 
   // 🔴 NUEVA FUNCIÓN: Eliminar ticket (solo para vendedores)
   const deleteTicket = async (ticketId) => {
@@ -76,113 +76,22 @@ const App = () => {
     }
   };
 
-  // ✅ ACTUALIZADO: lotterySchedule con horarios oficiales
-  const lotterySchedule = [
-    { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
-    { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
-    { name: 'Dorado Mañana', days: [1,2,3,4,5,6], time: '10:58' },
-    { name: 'Dorado Tarde', days: [1,2,3,4,5,6], time: '15:28' },
-    { name: 'Dorado Noche', days: [0,6], time: '22:15', holidayTime: '19:25', sundayTime: '19:25' },
-    { name: 'Fantástica Día', days: [1,2,3,4,5,6], time: '12:57' },
-    { name: 'Fantástica Noche', days: [1,2,3,4,5,6], time: '20:30' },
-    { name: 'El Samán de la Suerte', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '19:00', sundayTime: '19:00' },
-    { name: 'Paisita Día', days: [1,2,3,4,5,6], time: '13:00', holidayTime: '14:00', sundayTime: '14:00' },
-    { name: 'Paisita Noche', days: [1,2,3,4,5,6], time: '18:00', holidayTime: '20:00', sundayTime: '20:00' },
-    { name: 'Chontico Día', days: [0,1,2,3,4,5,6], time: '13:00', holidayTime: '13:00' },
-    { name: 'Chontico Noche', days: [0,1,2,3,4,5,6], time: '19:00', holidayTime: '20:00', saturdayTime: '22:00', sundayTime: '20:00' },
-    { name: 'Pijao de Oro', days: [0,1,2,3,4,5,6], time: '14:00', holidayTime: '20:00', saturdayTime: '21:00', sundayTime: '22:00' },
-    { name: 'Super Astro Sol', days: [1,2,3,4,5,6], time: '14:30' },
-    { name: 'Super Astro Luna', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-    { name: 'Sinuano Día', days: [1,2,3,4,5,6], time: '14:30', holidayTime: '13:00', sundayTime: '13:00' },
-    { name: 'Sinuano Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-    { name: 'La Caribeña Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
-    { name: 'La Caribeña Noche', days: [0,1,2,3,4,5,6], time: '22:30', holidayTime: '20:30', sundayTime: '20:30' },
-    { name: 'Motilón Tarde', days: [0,1,2,3,4,5,6], time: '15:00', holidayTime: '15:00' },
-    { name: 'Motilón Noche', days: [0,1,2,3,4,5,6], time: '21:00', holidayTime: '21:00' },
-    { name: 'Cafeterito Tarde', days: [1,2,3,4,5,6], time: '12:00' },
-    { name: 'Cafeterito Noche', days: [0,1,2,3,4,5,6], time: '22:00', holidayTime: '21:00', saturdayTime: '23:00', sundayTime: '21:00' },
-    { name: 'Paisa Lotto', days: [6], time: '22:00' },
-    { name: 'La Culona Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
-    { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
-    { name: 'SuperMillonaria', days: [5], time: '23:00' },
-    { name: 'Lotería de Cundinamarca', days: [1], time: '22:30' },
-    { name: 'Lotería de Tolima', days: [1], time: '23:00' },
-    { name: 'Lotería Cruz Roja', days: [2], time: '22:30' },
-    { name: 'Lotería de Huila', days: [2], time: '22:30' },
-    { name: 'Lotería de Manizales', days: [3], time: '22:30' },
-    { name: 'Lotería del Meta', days: [3], time: '22:30' },
-    { name: 'Lotería del Valle', days: [3], time: '22:30' },
-    { name: 'Lotería Quindío', days: [4], time: '22:30' },
-    { name: 'Lotería de Bogotá', days: [4], time: '22:30' },
-    { name: 'Lotería de Santander', days: [5], time: '23:00' },
-    { name: 'Lotería de Medellín', days: [5], time: '23:00' },
-    { name: 'Lotería Risaralda', days: [5], time: '23:00' },
-    { name: 'Lotería de Boyacá', days: [6], time: '22:40' },
-    { name: 'Lotería de Cauca', days: [6], time: '21:40' },
-    { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' }
-  ];
-
-  const isHoliday = () => {
-    const holidays = [
-      '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25'
-    ];
-    const today = new Date();
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    const day = today.getDate().toString().padStart(2, '0');
-    const todayStr = `${month}-${day}`;
-    return holidays.includes(todayStr);
-  };
-
-  const getLotteryTime = (lottery) => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const holiday = isHoliday();
-    if (holiday && lottery.holidayTime) {
-      return lottery.holidayTime;
-    } else if (dayOfWeek === 6 && lottery.saturdayTime) {
-      return lottery.saturdayTime;
-    } else if (dayOfWeek === 0 && lottery.sundayTime) {
-      return lottery.sundayTime;
-    } else if (lottery.days.includes(dayOfWeek)) {
-      return lottery.time;
-    }
-    return null;
-  };
-
+    // 🔴 NUEVO: Cargar loterías del día desde el backend (con actualización automática)
   useEffect(() => {
-    const todayLotteries = lotterySchedule.map((lottery, index) => {
-      const time = getLotteryTime(lottery);
-      if (time) {
-        return {
-          id: index + 1,
-          name: lottery.name,
-          time: time,
-          active: true
-        };
+    const loadLotteries = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/lotteries/today`);
+        if (response.ok) {
+          const data = await response.json();
+          setLotteries(data);
+        }
+      } catch (error) {
+        console.error('Error al cargar loterías del día:', error);
       }
-      return null;
-    }).filter(lottery => lottery !== null);
-    setLotteries(todayLotteries);
-  }, []);
+    };
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const currentHour = now.getHours().toString().padStart(2, '0');
-      const currentMinute = now.getMinutes().toString().padStart(2, '0');
-      const currentTime = `${currentHour}:${currentMinute}`;
-      setLotteries(prev => prev.map(lottery => {
-        const [hour, minute] = lottery.time.split(':');
-        const lotteryTime = new Date();
-        lotteryTime.setHours(parseInt(hour), parseInt(minute), 0);
-        const fiveMinutesBefore = new Date(lotteryTime.getTime() - 5 * 60000);
-        const nowTime = new Date();
-        return {
-          ...lottery,
-          active: nowTime < fiveMinutesBefore
-        };
-      }));
-    }, 60000);
+    loadLotteries(); // Carga inicial
+    const interval = setInterval(loadLotteries, 60000); // Actualiza cada minuto
     return () => clearInterval(interval);
   }, []);
 
