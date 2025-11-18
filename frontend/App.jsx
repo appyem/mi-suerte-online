@@ -1602,7 +1602,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                           number: currentBet.number.slice(0, parseInt(newDigits))
                         });
                       }}
-                      className="w-full px-4 py-3 border border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="b-full px-4 py-3 border border-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="2">2 Cifras</option>
                       <option value="3">3 Cifras</option>
@@ -1615,7 +1615,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       type="text"
                       value={currentBet.number}
                       onChange={(e) => handleNumberChange(e.target.value.replace(/\D/g, ''))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="b-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder={`Ej: ${'12'.substring(0, parseInt(currentBet.digits))}`}
                       maxLength={parseInt(currentBet.digits)}
                     />
