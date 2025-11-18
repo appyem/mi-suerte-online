@@ -547,7 +547,7 @@ app.get('/api/lotteries/today', (req, res) => {
         // Hoy es martes y ayer fue lunes festivo → SÍ juega hoy
         if (todayDayOfWeek === 2 && yesterdayWasMondayHoliday) {
           const [h, m] = lottery.time.split(':').map(Number);
-          const now = new Date();
+          const now = new Date(nowInColombia);
           const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
           const lotteryTimeInMinutes = h * 60 + m;
           const fiveMinutesBefore = lotteryTimeInMinutes - 5;
@@ -557,7 +557,7 @@ app.get('/api/lotteries/today', (req, res) => {
         // Hoy es lunes normal → juega normal
         if (todayDayOfWeek === 1 && !todayIsHoliday) {
           const [h, m] = lottery.time.split(':').map(Number);
-          const now = new Date();
+          const now = new Date(nowInColombia);
           const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
           const lotteryTimeInMinutes = h * 60 + m;
           const fiveMinutesBefore = lotteryTimeInMinutes - 5;
@@ -590,8 +590,8 @@ app.get('/api/lotteries/today', (req, res) => {
 
       if (!timeStr) return null;
 
-      // Obtener la hora actual EN COLOMBIA
-      const nowInColombia = new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" });
+      // ✅ CORRECCIÓN CLAVE: Extraer h y m de timeStr
+      const [h, m] = timeStr.split(':').map(Number);
       const now = new Date(nowInColombia);
       const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
       const lotteryTimeInMinutes = h * 60 + m;
@@ -602,14 +602,14 @@ app.get('/api/lotteries/today', (req, res) => {
     })
     .filter(Boolean); // Elimina nulls
 
-      console.log("=== DEBUG LOTERÍAS HOY ===");
-      console.log("Fecha actual (servidor):", new Date().toISOString());
-      console.log("Fecha actual (Colombia):", new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" }));
-      console.log("¿Es festivo?", todayIsHoliday);
-      console.log("Día de la semana (0=dom, 1=lun...):", todayDayOfWeek);
-      console.log("Loterías devueltas:", todayLotteries.length);
-      todayLotteries.forEach(l => console.log("✅", l.name, l.time, l.active ? "ACTIVA" : "CERRADA"));
-      console.log("===========================");
+  console.log("=== DEBUG LOTERÍAS HOY ===");
+  console.log("Fecha actual (servidor):", new Date().toISOString());
+  console.log("Fecha actual (Colombia):", new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" }));
+  console.log("¿Es festivo?", todayIsHoliday);
+  console.log("Día de la semana (0=dom, 1=lun...):", todayDayOfWeek);
+  console.log("Loterías devueltas:", todayLotteries.length);
+  todayLotteries.forEach(l => console.log("✅", l.name, l.time, l.active ? "ACTIVA" : "CERRADA"));
+  console.log("===========================");
 
   res.json(todayLotteries);
 });
