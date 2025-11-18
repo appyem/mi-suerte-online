@@ -590,8 +590,9 @@ app.get('/api/lotteries/today', (req, res) => {
 
       if (!timeStr) return null;
 
-      const [h, m] = timeStr.split(':').map(Number);
-      const now = new Date();
+      // Obtener la hora actual EN COLOMBIA
+      const nowInColombia = new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" });
+      const now = new Date(nowInColombia);
       const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
       const lotteryTimeInMinutes = h * 60 + m;
       const fiveMinutesBefore = lotteryTimeInMinutes - 5;
