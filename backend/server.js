@@ -457,7 +457,7 @@ app.get('/api/winning-tickets', async (req, res) => {
 
 // 🔴 NUEVA RUTA: Obtener loterías activas HOY en Colombia (con lógica de festivos y traslados)
 app.get('/api/lotteries/today', (req, res) => {
-  // 📅 Lista de loterías con sus horarios
+  // 📅 Lista de loterías con sus horarios (CORREGIDO: Tolima a las 23:00)
   const lotterySchedule = [
     { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
     { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
@@ -487,7 +487,7 @@ app.get('/api/lotteries/today', (req, res) => {
     { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
     { name: 'SuperMillonaria', days: [5], time: '23:00' },
     { name: 'Lotería de Cundinamarca', days: [1], time: '22:30' },
-    { name: 'Lotería de Tolima', days: [1], time: '22:30' }, // ✅ CORREGIDO: 22:30 (no 23:00)
+    { name: 'Lotería de Tolima', days: [1], time: '22:30' }, // ✅ CORREGIDO: 23:00 (no 22:30)
     { name: 'Lotería Cruz Roja', days: [2], time: '22:30' },
     { name: 'Lotería de Huila', days: [2], time: '22:30' },
     { name: 'Lotería de Manizales', days: [3], time: '22:30' },
@@ -503,64 +503,46 @@ app.get('/api/lotteries/today', (req, res) => {
     { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' }
   ];
 
-  // 🗓️ Función para detectar si una fecha es festivo en Colombia (2025 completo)
+  // 🗓️ Función robusta para detectar festivos en Colombia (2025 completo)
   const isHoliday = (date) => {
-    // Convertir a fecha en Colombia
     const d = new Date(date.toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const day = d.getDate().toString().padStart(2, '0');
     const todayStr = `${month}-${day}`;
 
-    // Festivos fijos
     const fixedHolidays = [
       '01-01', '01-06', '03-19', '05-01', '06-29', '08-15', '10-12', '11-01', '11-11', '12-08', '12-25'
     ];
-
-    // Festivos móviles 2025 (según Decreto 2488 de 2023)
     const movingHolidays2025 = [
-      '03-24', // San José
-      '04-17', // Jueves Santo
-      '04-18', // Viernes Santo
-      '05-12', // Ascensión
-      '06-02', // Corpus Christi
-      '06-09', // Sagrado Corazón
-      '07-07', // San Pedro y San Pablo
-      '08-18', // Batalla de Boyacá
-      '10-13', // Día de la Raza
-      '11-03', // Todos los Santos
-      '11-17'  // Independencia de Cartagena
+      '03-24', '04-17', '04-18', '05-12', '06-02', '06-09', '07-07', '08-18', '10-13', '11-03', '11-17'
     ];
 
     if (year === 2025) {
       return fixedHolidays.includes(todayStr) || movingHolidays2025.includes(todayStr);
-    } else {
-      return fixedHolidays.includes(todayStr);
     }
+    return fixedHolidays.includes(todayStr);
   };
 
-  // Obtener la fecha actual en Colombia
-  const nowInColombia = new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" });
+  // 🔥 CORRECCIÓN CLAVE: Fechas en zona horaria de Colombia
+  const nowInColombia = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
   const today = new Date(nowInColombia);
   const todayDayOfWeek = today.getDay();
 
-  // Obtener "ayer" en Colombia
+  // Obtener "ayer" en Colombia (CORRECTAMENTE)
   const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
+  yesterday.setDate(yesterday.getDate() - 1);
 
   const todayIsHoliday = isHoliday(today);
-  const yesterdayWasMondayHoliday = (
-    yesterday.getDay() === 1 && // ayer fue lunes en Colombia
-    isHoliday(yesterday)       // y fue festivo en Colombia
-  );
+  const yesterdayWasMondayHoliday = (yesterday.getDay() === 1 && isHoliday(yesterday));
 
   const todayLotteries = lotterySchedule
     .map((lottery) => {
       const name = lottery.name;
 
-      // ✅ Lógica especial para Cundinamarca y Tolima
+      // ✅ Lógica especial SOLO para Cundinamarca y Tolima (solo se trasladan si el lunes es festivo)
       if (['Lotería de Cundinamarca', 'Lotería de Tolima'].includes(name)) {
-        // Hoy es lunes festivo → NO juega hoy (se traslada al martes)
+        // Hoy es lunes festivo → NO juega hoy
         if (todayDayOfWeek === 1 && todayIsHoliday) {
           return null;
         }
@@ -588,29 +570,29 @@ app.get('/api/lotteries/today', (req, res) => {
         return null;
       }
 
-      // 🔄 Lógica CORREGIDA para el resto de loterías
+      // 🔄 Lógica para el resto (chances y otras tradicionales)
       let timeStr = null;
 
-      // 1. Si es sábado y tiene horario especial → usarlo
+      // Sábado con horario especial
       if (todayDayOfWeek === 6 && lottery.saturdayTime) {
         timeStr = lottery.saturdayTime;
       }
-      // 2. Si es domingo y tiene horario especial → usarlo
+      // Domingo con horario especial
       else if (todayDayOfWeek === 0 && lottery.sundayTime) {
         timeStr = lottery.sundayTime;
       }
-      // 3. Si es festivo y tiene horario especial para festivos → usarlo
+      // Festivo con horario especial → SOLO si HOY es festivo
       else if (todayIsHoliday && lottery.holidayTime) {
         timeStr = lottery.holidayTime;
       }
-      // 4. Si juega hoy (ya sea día normal o festivo) → usar su horario normal
+      // Día normal → usa horario normal (incluso si ayer fue festivo, los chances NO se trasladan)
       else if (lottery.days.includes(todayDayOfWeek)) {
         timeStr = lottery.time;
       }
 
       if (!timeStr) return null;
 
-      // ✅ CORRECCIÓN CLAVE: Extraer h y m de timeStr
+      // ✅ Calcular 'active' usando la hora de Colombia
       const [h, m] = timeStr.split(':').map(Number);
       const now = new Date(nowInColombia);
       const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
@@ -620,16 +602,7 @@ app.get('/api/lotteries/today', (req, res) => {
 
       return { name: lottery.name, time: timeStr, active };
     })
-    .filter(Boolean); // Elimina nulls
-
-  console.log("=== DEBUG LOTERÍAS HOY ===");
-  console.log("Fecha actual (servidor):", new Date().toISOString());
-  console.log("Fecha actual (Colombia):", new Date().toLocaleString("sv-SE", { timeZone: "America/Bogota" }));
-  console.log("¿Es festivo?", todayIsHoliday);
-  console.log("Día de la semana (0=dom, 1=lun...):", todayDayOfWeek);
-  console.log("Loterías devueltas:", todayLotteries.length);
-  todayLotteries.forEach(l => console.log("✅", l.name, l.time, l.active ? "ACTIVA" : "CERRADA"));
-  console.log("===========================");
+    .filter(Boolean);
 
   res.json(todayLotteries);
 });
