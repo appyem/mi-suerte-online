@@ -1591,7 +1591,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad (Cifras)</label>
+                    <label className="block text-gray-800 font-medium text-gray-700 mb-2">Modalidad (Cifras)</label>
                     <select
                       value={currentBet.digits}
                       onChange={(e) => {
