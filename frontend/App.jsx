@@ -1951,7 +1951,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       value={resendTicketData.customerPhone}
                       onChange={(e) => setResendTicketData({...resendTicketData, customerPhone: e.target.value.replace(/\D/g, '')})}
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                      placeholder="3001234567"
+                      placeholder="3001234568"
                       maxLength={10}
                     />
                   </div>
