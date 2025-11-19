@@ -1789,7 +1789,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             </div>
           )}
           {betList.length > 0 && activeTab === 'create' && (
-            <div className="bg-gray-800 text-white rounded-xl shadow-sm p-6 mt-6">
+            <div className="bg-gray-800 text-gray-800 rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold mb-4">Apuestas en el Tiquete</h3>
               <div className="space-y-3">
                 {betList.map(bet => (
