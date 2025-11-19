@@ -1574,11 +1574,11 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               {betMode === 'single' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Lotería</label>
+                    <label className="block text-sm font-medium text-white mb-2">Seleccionar Lotería</label>
                     <select
                       value={currentBet.lottery}
                       onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
-                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                       disabled={lotteries.filter(l => l.active).length === 0}
                     >
                       <option value="">Seleccione una lotería</option>
@@ -1610,7 +1610,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Número Apostado</label>
+                    <label className="block text-sm font-medium text-white mb-2">Número Apostado</label>
                     <input
                       type="text"
                       value={currentBet.number}
@@ -1619,10 +1619,10 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                       placeholder={`Ej: ${'12'.substring(0, parseInt(currentBet.digits))}`}
                       maxLength={parseInt(currentBet.digits)}
                     />
-                    <p className="text-sm text-gray-500 mt-1">Debe ingresar exactamente {currentBet.digits} dígito{parseInt(currentBet.digits) > 1 ? 's' : ''}</p>
+                    <p className="text-sm text-white mt-1">Debe ingresar exactamente {currentBet.digits} dígito{parseInt(currentBet.digits) > 1 ? 's' : ''}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor de la Apuesta (COP)</label>
+                    <label className="block text-sm font-medium text-white mb-2">Valor de la Apuesta (COP)</label>
                     <input
                       type="number"
                       value={currentBet.amount}
@@ -1641,7 +1641,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
               ) : (
                 <div>
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Loterías</label>
+                    <label className="block text-sm font-medium text-white mb-2">Seleccionar Loterías</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                       {lotteries.filter(l => l.active).map(lottery => (
                         <label key={lottery.name} className="flex items-center">
@@ -1828,7 +1828,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
             <div className="bg-gray-800 text-white rounded-xl shadow-sm p-6 mt-6">
               <h3 className="text-lg font-bold mb-4">Información del Cliente</h3>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Cliente</label>
+                <label className="block text-sm font-medium text-white mb-2">Nombre del Cliente</label>
                 <input
                   type="text"
                   value={customerName}
@@ -1838,7 +1838,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                 />
               </div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número del Cliente (solo dígitos)</label>
+                <label className="block text-sm font-medium text-white mb-2">Número del Cliente (solo dígitos)</label>
                 <div className="flex">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
                     +57
