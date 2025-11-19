@@ -1578,7 +1578,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                     <select
                       value={currentBet.lottery}
                       onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
-                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                       disabled={lotteries.filter(l => l.active).length === 0}
                     >
                       <option value="">Seleccione una lotería</option>
@@ -1657,7 +1657,7 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
                             }}
                             className="mr-2"
                           />
-                          <span className="text-sm text-gray-800">{lottery.name}</span>
+                          <span className="text-sm text-white">{lottery.name}</span>
                         </label>
                       ))}
                     </div>
