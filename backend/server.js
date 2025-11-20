@@ -24,6 +24,81 @@ const parseDateToColombia = (dateStr) => {
   return new Date(Date.UTC(year, month - 1, day, 5, 0, 0));
 };
 
+// 🔴 NUEVA FUNCIÓN: Comparación inteligente de nombres de loterías
+const findLotteryMatch = (ticketLottery, officialResults) => {
+  if (!ticketLottery) return null;
+  
+  // Normalizar el nombre del ticket
+  const normalizedTicket = ticketLottery
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '') // Quitar caracteres especiales
+    .replace(/\s+/g, ' ') // Normalizar espacios
+    .trim();
+  
+  console.log(`🔍 Buscando: "${ticketLottery}" -> "${normalizedTicket}"`);
+  
+  // 1. Buscar coincidencia exacta primero
+  for (const result of officialResults) {
+    const normalizedResult = result.lottery
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    if (normalizedResult === normalizedTicket) {
+      console.log(`✅ Coincidencia exacta: "${ticketLottery}" == "${result.lottery}"`);
+      return result;
+    }
+  }
+  
+  // 2. Buscar coincidencias parciales (si uno contiene al otro)
+  for (const result of officialResults) {
+    const normalizedResult = result.lottery
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    if (normalizedResult.includes(normalizedTicket) || normalizedTicket.includes(normalizedResult)) {
+      console.log(`🎯 Coincidencia parcial: "${ticketLottery}" ~ "${result.lottery}"`);
+      return result;
+    }
+  }
+  
+  // 3. Búsqueda específica para casos conocidos
+  const specialCases = {
+    'loteria del meta': 'meta',
+    'lotería del meta': 'meta',
+    'loteria de bogota': 'bogota',
+    'lotería de bogotá': 'bogota',
+    'loteria de medellin': 'medellin',
+    'lotería de medellín': 'medellin'
+  };
+  
+  const specialKey = Object.keys(specialCases).find(key => 
+    normalizedTicket.includes(key)
+  );
+  
+  if (specialKey) {
+    const target = specialCases[specialKey];
+    for (const result of officialResults) {
+      const normalizedResult = result.lottery
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (normalizedResult.includes(target)) {
+        console.log(`🎯 Caso especial: "${ticketLottery}" -> "${result.lottery}"`);
+        return result;
+      }
+    }
+  }
+  
+  console.log(`❌ No se encontró coincidencia para "${ticketLottery}"`);
+  return null;
+};
+
 // Esquema de Ticket
 const ticketSchema = new mongoose.Schema({
   ticketId: String,
@@ -398,9 +473,11 @@ app.get('/api/lottery-results', async (req, res) => {
   }
 });
 
-// 🔴 NUEVA RUTA: Verificar tickets ganadores (usa la API real)
+// 🔴 NUEVA RUTA: Verificar tickets ganadores (usa la API real) - CORREGIDA
 app.get('/api/winning-tickets', async (req, res) => {
   try {
+    console.log('🚀 Iniciando búsqueda de tickets ganadores...');
+    
     // 1. Calcular "ayer" en Colombia
     const todayInColombia = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
     const todayDate = new Date(todayInColombia);
@@ -408,8 +485,11 @@ app.get('/api/winning-tickets', async (req, res) => {
     yesterdayDate.setDate(todayDate.getDate() - 1);
     const yesterday = yesterdayDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
+    console.log(`📅 Buscando resultados del día: ${yesterday}`);
+
     // 2. Obtener resultados oficiales de AYER
     const officialResults = await fetchOfficialResults(yesterday);
+    console.log(`📊 Se encontraron ${officialResults.length} resultados oficiales`);
 
     // 3. Calcular rango de fechas para "ayer" en Colombia
     const start = parseDateToColombia(yesterday);
@@ -417,23 +497,27 @@ app.get('/api/winning-tickets', async (req, res) => {
     end.setDate(end.getDate() + 1);
 
     // 4. Obtener todos los tickets de AYER
-    const tickets = await Ticket.find({ timestamp: { $gte: start, $lt: end } });   
+    const tickets = await Ticket.find({ timestamp: { $gte: start, $lt: end } });
+    console.log(`🎫 Se encontraron ${tickets.length} tickets de ayer`);
 
-    // 4. Verificar coincidencias (2, 3 o 4 cifras al final del número ganador)
+    // 5. Verificar coincidencias (2, 3 o 4 cifras al final del número ganador)
     const winningTickets = [];
     for (const ticket of tickets) {
       for (const bet of ticket.bets) {
         const played = bet.number;
         const digits = played.length;
         
-        // Buscar resultado que coincida con la lotería (ignorar mayúsculas y espacios)
-        const result = officialResults.find(r => 
-          r.lottery.toLowerCase().replace(/\s+/g, '') === bet.lottery.toLowerCase().replace(/\s+/g, '')
-        );
+        console.log(`🔍 Analizando ticket ${ticket.ticketId}: ${bet.lottery} - ${played} (${digits} cifras)`);
+        
+        // 🔴 ÚNICO CAMBIO: Usar la nueva función de comparación
+        const result = findLotteryMatch(bet.lottery, officialResults);
         
         if (result) {
           const lastDigits = result.winningNumber.slice(-digits);
+          console.log(`🎯 Comparando: ${played} vs ${result.winningNumber} (últimos ${digits}: ${lastDigits})`);
+          
           if (lastDigits === played) {
+            console.log(`🎉 ¡GANADOR! Ticket ${ticket.ticketId} - ${bet.lottery} - ${played}`);
             winningTickets.push({
               ticketId: ticket.ticketId,
               seller: ticket.seller,
@@ -443,11 +527,16 @@ app.get('/api/winning-tickets', async (req, res) => {
               winningNumber: result.winningNumber,
               timestamp: ticket.timestamp
             });
+          } else {
+            console.log(`❌ No coincide: ${played} ≠ ${lastDigits}`);
           }
+        } else {
+          console.log(`❌ No se encontró resultado para lotería: ${bet.lottery}`);
         }
       }
     }
 
+    console.log(`🏆 Total de tickets ganadores encontrados: ${winningTickets.length}`);
     res.json(winningTickets);
   } catch (error) {
     console.error('Error en /api/winning-tickets:', error);
