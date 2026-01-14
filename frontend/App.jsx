@@ -1036,29 +1036,53 @@ return () => clearInterval(interval);
   };
 
   const generateDetailedReport = async (type) => {
-    if (!type) {
-      alert('Seleccione un tipo de reporte');
-      return;
-    }
-    if (reportStartDate > reportEndDate) {
-      alert('La fecha de inicio no puede ser mayor que la fecha de fin');
-      return;
-    }
-    try {
-      // ✅ Usar startDate y endDate, NO "date"
-      let url = `${BACKEND_URL}/api/reports?type=${type}&startDate=${reportStartDate}&endDate=${reportEndDate}`;
-      if (selectedSeller) url += `&seller=${selectedSeller}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Error al generar el reporte');
-      const reportData = await response.json();
-      setCurrentReport(reportData);
-      setReportType(type);
-      setShowReportModal(true);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al generar el reporte: ' + error.message);
-    }
-  };
+if (!type) {
+alert('Seleccione un tipo de reporte');
+return;
+}
+
+// Si se selecciona solo una fecha (hoy)
+if (reportStartDate === reportEndDate) {
+try {
+const url = `${BACKEND_URL}/api/reports?type=${type}&startDate=${reportStartDate}` +
+(selectedSeller ? `&seller=${selectedSeller}` : '');
+const response = await fetch(url);
+if (!response.ok) {
+const errorData = await response.json();
+throw new Error(errorData.error || 'Error al generar el reporte');
+}
+const reportData = await response.json();
+setCurrentReport(reportData);
+setReportType(type);
+setShowReportModal(true);
+} catch (error) {
+console.error('Error en reporte de un día:', error);
+alert(`Error al generar el reporte: ${error.message}`);
+}
+} else {
+// Para rango de fechas
+if (reportStartDate > reportEndDate) {
+alert('La fecha de inicio no puede ser mayor que la fecha de fin');
+return;
+}
+try {
+const url = `${BACKEND_URL}/api/reports?type=${type}&startDate=${reportStartDate}&endDate=${reportEndDate}` +
+(selectedSeller ? `&seller=${selectedSeller}` : '');
+const response = await fetch(url);
+if (!response.ok) {
+const errorData = await response.json();
+throw new Error(errorData.error || 'Error al generar el reporte');
+}
+const reportData = await response.json();
+setCurrentReport(reportData);
+setReportType(type);
+setShowReportModal(true);
+} catch (error) {
+console.error('Error en reporte de rango:', error);
+alert(`Error al generar el reporte: ${error.message}`);
+}
+}
+};
 
   const downloadReport = () => {
     const element = document.createElement("a");
@@ -1534,10 +1558,10 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
         </div>
         {showReportModal && currentReport && (
 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-<div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-xl">
-<div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+<div className="bg-white rounded-xl max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-xl">
+<div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-200">
 <h3 className="text-2xl font-bold text-gray-800">{currentReport.title}</h3>
-<p className="text-gray-600 font-medium mt-1">Período: {currentReport.period}</p>
+<p className="text-gray-600 font-medium mt-1">{currentReport.period}</p>
 </div>
 <div className="p-6">
 {reportType === 'sales' ? (
@@ -1549,35 +1573,81 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
 <p className="text-2xl font-bold text-green-700 mt-1">${currentReport.totalSales}</p>
 </div>
 <div>
-<p className="text-sm font-medium text-gray-600">Número de Tiquetes</p>
+<p className="text-sm font-medium text-gray-600">Tiquetes</p>
 <p className="text-2xl font-bold text-blue-700 mt-1">{currentReport.ticketCount}</p>
 </div>
 <div>
 <p className="text-sm font-medium text-gray-600">Promedio por Tiquete</p>
-<p className="text-2xl font-bold text-purple-700 mt-1">${Math.round(currentReport.totalSales / currentReport.ticketCount).toLocaleString()}</p>
+<p className="text-2xl font-bold text-purple-700 mt-1">
+${currentReport.ticketCount > 0 ? 
+Math.round(parseInt(currentReport.totalSales.replace(/,/g, '')) / currentReport.ticketCount).toLocaleString() 
+: '0'}
+</p>
 </div>
 </div>
 </div>
 
 <div className="mt-6">
-<h4 className="text-lg font-bold text-gray-800 mb-3">Ventas por Vendedor:</h4>
-<div className="space-y-3">
+<h4 className="text-lg font-bold text-gray-800 mb-3">Detalle por Vendedor</h4>
+<div className="overflow-x-auto">
+<table className="min-w-full divide-y divide-gray-200">
+<thead className="bg-gray-50">
+<tr>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Vendedor</th>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Ventas</th>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Tiquetes</th>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Promedio</th>
+</tr>
+</thead>
+<tbody className="divide-y divide-gray-200">
 {currentReport.sellers && currentReport.sellers.map((seller, index) => (
-<div key={index} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
-<div className="flex justify-between items-start">
+<tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+<td className="px-4 py-3 text-sm font-medium text-gray-800">{seller.seller}</td>
+<td className="px-4 py-3 text-sm text-green-700 font-bold">${seller.sales}</td>
+<td className="px-4 py-3 text-sm text-gray-700">{seller.tickets}</td>
+<td className="px-4 py-3 text-sm text-blue-700 font-medium">${seller.average}</td>
+</tr>
+))}
+</tbody>
+</table>
+</div>
+</div>
+
+{currentReport.details && currentReport.details.length > 0 && (
+<div className="mt-6">
+<h4 className="text-lg font-bold text-gray-800 mb-3">Ventas de Hoy (Detallado)</h4>
+<div className="space-y-3 max-h-96 overflow-y-auto">
+{currentReport.details.map((ticket, index) => (
+<div key={index} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50">
+<div className="flex justify-between">
 <div>
-<p className="font-medium text-gray-800">{seller.name || seller.seller}</p>
-<p className="text-sm text-gray-600">Tiquetes: {seller.tickets}</p>
+<p className="font-medium text-gray-800">Ticket: {ticket.ticketId}</p>
+<p className="text-sm text-gray-600">Cliente: {ticket.customerName || 'Sin nombre'}</p>
+<p className="text-xs text-gray-500 mt-1">Vendedor: {ticket.seller}</p>
 </div>
 <div className="text-right">
-<p className="font-bold text-green-700 text-lg">${seller.sales.toLocaleString()}</p>
-<p className="text-xs text-gray-500">Promedio: ${Math.round(seller.sales / seller.tickets).toLocaleString()}</p>
+<p className="font-bold text-green-700">${ticket.total.toLocaleString()}</p>
+<p className="text-xs text-gray-500">{new Date(ticket.timestamp).toLocaleTimeString('es-CO')}</p>
 </div>
+</div>
+<div className="mt-2 pl-4 border-l-2 border-blue-200">
+{ticket.bets.map((bet, betIndex) => (
+<p key={betIndex} className="text-xs text-gray-700">
+{betIndex + 1}. {bet.lottery} - {bet.number} 
+{bet.digits === '1' ? '(1 Cifra - Uña)' :
+bet.digits === '2' ? '(2 Cifras - Pata)' :
+bet.digits === '3' ? (bet.type === 'combined' ? '(3 Cifras - Combinado)' : '(3 Cifras - Directo)') :
+bet.digits === '4' ? (bet.type === 'combined' ? '(4 Cifras - Combinado)' : '(4 Cifras - Directo)') :
+'(5 Cifras)'
+} - ${bet.amount.toLocaleString()}
+</p>
+))}
 </div>
 </div>
 ))}
 </div>
 </div>
+)}
 </div>
 ) : reportType === 'payments' ? (
 <div className="space-y-6">
@@ -1592,42 +1662,72 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
 <p className="text-2xl font-bold text-orange-700 mt-1">${currentReport.totalCommission}</p>
 </div>
 <div>
-<p className="text-sm font-medium text-gray-600">Número de Pagos</p>
+<p className="text-sm font-medium text-gray-600">Pagos Realizados</p>
 <p className="text-2xl font-bold text-blue-700 mt-1">{currentReport.paymentCount}</p>
 </div>
 </div>
 </div>
 
 <div className="mt-6">
-<h4 className="text-lg font-bold text-gray-800 mb-3">Pagos por Vendedor:</h4>
-<div className="space-y-3">
+<h4 className="text-lg font-bold text-gray-800 mb-3">Detalle de Pagos</h4>
+<div className="overflow-x-auto">
+<table className="min-w-full divide-y divide-gray-200">
+<thead className="bg-gray-50">
+<tr>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Vendedor</th>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Monto Pagado</th>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Comisión</th>
+<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Fecha</th>
+</tr>
+</thead>
+<tbody className="divide-y divide-gray-200">
 {currentReport.sellers && currentReport.sellers.map((seller, index) => (
-<div key={index} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
-<div className="flex justify-between items-start">
+<tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+<td className="px-4 py-3 text-sm font-medium text-gray-800">{seller.name}</td>
+<td className="px-4 py-3 text-sm text-green-700 font-bold">${seller.paid}</td>
+<td className="px-4 py-3 text-sm text-orange-700">${seller.commission}</td>
+<td className="px-4 py-3 text-sm text-gray-600">{seller.date}</td>
+</tr>
+))}
+</tbody>
+</table>
+</div>
+</div>
+
+{currentReport.details && currentReport.details.length > 0 && (
+<div className="mt-6">
+<h4 className="text-lg font-bold text-gray-800 mb-3">Pagos de Hoy (Detallado)</h4>
+<div className="space-y-3 max-h-96 overflow-y-auto">
+{currentReport.details.map((payment, index) => (
+<div key={index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+<div className="grid grid-cols-2 gap-2">
 <div>
-<p className="font-medium text-gray-800">{seller.name}</p>
-<p className="text-sm text-gray-600">Comisión: ${seller.commission}</p>
+<p className="font-medium text-gray-800">{payment.seller}</p>
+<p className="text-sm text-gray-600">Ventas Totales: ${payment.totalSales.toLocaleString()}</p>
+<p className="text-sm text-gray-600">Comisión: {payment.commissionRate}%</p>
 </div>
 <div className="text-right">
-<p className="font-bold text-green-700 text-lg">${seller.paid}</p>
-<p className="text-xs text-gray-500">{seller.payments} pago(s)</p>
+<p className="font-bold text-green-700">Neto: ${payment.netAmount.toLocaleString()}</p>
+<p className="text-sm text-orange-700">Comisión: ${payment.commissionAmount.toLocaleString()}</p>
+<p className="text-xs text-gray-500">{payment.ticketCount} tiquetes</p>
 </div>
 </div>
 </div>
 ))}
 </div>
 </div>
+)}
 </div>
 ) : (
 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+<h4 className="font-bold text-gray-800 mb-2">Datos del Reporte:</h4>
 <pre className="text-gray-800 font-mono text-sm overflow-auto whitespace-pre-wrap">
 {JSON.stringify(currentReport, null, 2)}
 </pre>
 </div>
 )}
 </div>
-<div className="p-4 border-t border-gray-200 bg-gray-50">
-<div className="flex flex-wrap gap-3 justify-end">
+<div className="p-4 border-t border-gray-200 bg-gray-50 flex flex-wrap gap-3 justify-end">
 <button
 onClick={downloadReport}
 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300 shadow-sm hover:shadow-md"
@@ -1646,7 +1746,6 @@ className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg tran
 >
 Cerrar
 </button>
-</div>
 </div>
 </div>
 </div>

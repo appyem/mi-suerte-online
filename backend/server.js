@@ -443,19 +443,36 @@ app.get('/api/payments', async (req, res) => {
   }
 });
 
-// Ruta para reportes
+// Ruta para reportes - CORREGIDA PARA FILTRAR POR FECHAS ESPECÍFICAS
 app.get('/api/reports', async (req, res) => {
   try {
-    const { type, date, seller } = req.query;
+    const { type, startDate, endDate, seller } = req.query;
     
     let filter = {};
-    if (date) {
-      const start = parseDateToColombia(date);
-      if (start) {
-        const end = new Date(start);
-        end.setDate(end.getDate() + 1);
-        filter.timestamp = { $gte: start, $lt: end };
+    
+    // Filtrar por rango de fechas específico
+    if (startDate && endDate) {
+      const start = parseDateToColombia(startDate);
+      const end = parseDateToColombia(endDate);
+      
+      if (!start || !end) {
+        return res.status(400).json({ error: 'Fechas inválidas' });
       }
+
+      const endPlusOne = new Date(end);
+      endPlusOne.setDate(endPlusOne.getDate() + 1);
+      
+      filter.timestamp = { $gte: start, $lt: endPlusOne };
+    } 
+    // Si solo se proporciona startDate (día de hoy)
+    else if (startDate) {
+      const start = parseDateToColombia(startDate);
+      if (!start) {
+        return res.status(400).json({ error: 'Fecha inválida' });
+      }
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      filter.timestamp = { $gte: start, $lt: end };
     }
     
     if (seller) {
@@ -465,37 +482,64 @@ app.get('/api/reports', async (req, res) => {
     let reportData = {};
     
     if (type === 'sales') {
-      const tickets = await Ticket.find(filter);
+      const tickets = await Ticket.find(filter).sort({ timestamp: -1 });
       const totalSales = tickets.reduce((sum, ticket) => sum + ticket.total, 0);
       const ticketCount = tickets.length;
+      
+      // Detalles detallados solo para el día de hoy
+      const todayDetails = startDate === endDate ? tickets.map(ticket => ({
+        ticketId: ticket.ticketId,
+        seller: ticket.seller,
+        customerName: ticket.customerName,
+        customerPhone: ticket.customerPhone,
+        total: ticket.total,
+        timestamp: ticket.timestamp,
+        bets: ticket.bets
+      })) : [];
       
       const sellerSales = {};
       tickets.forEach(ticket => {
         sellerSales[ticket.seller] = (sellerSales[ticket.seller] || 0) + ticket.total;
       });
       
-      const sellers = Object.entries(sellerSales).map(([seller, sales]) => ({
-        seller,
-        sales,
-        tickets: tickets.filter(t => t.seller === seller).length
-      }));
+      const sellers = Object.entries(sellerSales).map(([seller, sales]) => {
+        const sellerTickets = tickets.filter(t => t.seller === seller);
+        return {
+          seller,
+          sales: sales.toLocaleString(),
+          tickets: sellerTickets.length,
+          average: Math.round(sales / sellerTickets.length).toLocaleString()
+        };
+      });
       
       reportData = {
         title: 'REPORTE DE VENTAS',
-        period: date || 'Hoy',
+        period: startDate === endDate ? `Día: ${startDate}` : `Periodo: ${startDate} al ${endDate}`,
         totalSales: totalSales.toLocaleString(),
         ticketCount,
-        sellers
+        sellers,
+        details: todayDetails // Solo incluir detalles si es un solo día
       };
     } else if (type === 'payments') {
-      const payments = await Payment.find(filter);
+      const payments = await Payment.find(filter).sort({ createdAt: -1 });
       const totalPaid = payments.reduce((sum, payment) => sum + payment.netAmount, 0);
       const totalCommission = payments.reduce((sum, payment) => sum + payment.commissionAmount, 0);
       const paymentCount = payments.length;
       
+      // Detalles detallados solo para el día de hoy
+      const todayDetails = startDate === endDate ? payments.map(payment => ({
+        seller: payment.seller,
+        date: payment.date,
+        totalSales: payment.totalSales,
+        commissionRate: payment.commissionRate,
+        commissionAmount: payment.commissionAmount,
+        netAmount: payment.netAmount,
+        ticketCount: payment.ticketCount
+      })) : [];
+      
       reportData = {
         title: 'REPORTE DE PAGOS A VENDEDORES',
-        period: date || 'Hoy',
+        period: startDate === endDate ? `Día: ${startDate}` : `Periodo: ${startDate} al ${endDate}`,
         totalPaid: totalPaid.toLocaleString(),
         totalCommission: totalCommission.toLocaleString(),
         paymentCount,
@@ -503,14 +547,16 @@ app.get('/api/reports', async (req, res) => {
           name: payment.seller,
           paid: payment.netAmount.toLocaleString(),
           commission: payment.commissionAmount.toLocaleString(),
-          payments: 1
-        }))
+          date: payment.date
+        })),
+        details: todayDetails // Solo incluir detalles si es un solo día
       };
     }
     
     res.json(reportData);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error en reporte:', error);
+    res.status(500).json({ error: 'Error al generar el reporte' });
   }
 });
 
