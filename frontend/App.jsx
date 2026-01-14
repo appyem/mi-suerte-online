@@ -10,8 +10,7 @@ const App = () => {
   const [sellers, setSellers] = useState([]);
   const [pendingBets, setPendingBets] = useState([]);
   const [tickets, setTickets] = useState([]);
-  const [currentBet, setCurrentBet] = useState({ lottery: '', digits: '2', number: '', amount: '' });
-  const [betList, setBetList] = useState([]);
+  const [currentBet, setCurrentBet] = useState({ lottery: '', digits: '2', number: '', amount: '', type: 'direct' });  const [betList, setBetList] = useState([]);
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [adminPhone, setAdminPhone] = useState('3001234567');
@@ -75,6 +74,8 @@ const App = () => {
       alert('Error de conexión al intentar eliminar el ticket');
     }
   };
+
+  
 
     // 🔴 NUEVO: Cargar loterías del día desde el backend (con actualización automática)
   useEffect(() => {
@@ -142,79 +143,108 @@ const App = () => {
   };
 
   const handleAddBet = () => {
-    if (betMode === 'single') {
-      if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
-        alert('Complete todos los campos');
-        return;
-      }
-      const digits = parseInt(currentBet.digits);
-      if (currentBet.number.length !== digits) {
-        alert(`El número debe tener exactamente ${digits} dígitos`);
-        return;
-      }
-      const amount = parseInt(currentBet.amount);
-      if (digits === 4 && amount > 5000) {
-        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
-        return;
-      }
-      if (amount > 20000) {
-        const newPendingBet = {
-          id: Date.now(),
-          seller: currentUser.username,
-          ...currentBet,
-          status: 'pending',
-          timestamp: new Date().toLocaleString()
-        };
-        setPendingBets([...pendingBets, newPendingBet]);
-        alert('Apuesta pendiente de aprobación del administrador');
-      } else {
-        setBetList([...betList, { ...currentBet, id: Date.now() }]);
-      }
-      setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
-    } else {
-      if (multiLotteries.length === 0) {
-        alert('Seleccione al menos una lotería');
-        return;
-      }
-      const { digits, number, amount } = currentBet;
-      if (!number || !amount) {
-        alert('Complete el número y el monto');
-        return;
-      }
-      const numDigits = parseInt(digits);
-      if (number.length !== numDigits) {
-        alert(`El número debe tener exactamente ${numDigits} dígitos`);
-        return;
-      }
-      const betAmount = parseInt(amount);
-      if (numDigits === 4 && betAmount > 5000) {
-        alert('El chance de 4 cifras tiene un límite máximo de $5,000 COP');
-        return;
-      }
-      const newBets = multiLotteries.map(lotteryName => ({
-        lottery: lotteryName,
-        digits,
-        number,
-        amount,
-        id: Date.now() + Math.random()
-      }));
-      if (betAmount > 20000) {
-        const pendingBets = newBets.map(bet => ({
-          ...bet,
-          seller: currentUser.username,
-          status: 'pending',
-          timestamp: new Date().toLocaleString()
-        }));
-        setPendingBets([...pendingBets, ...pendingBets]);
-        alert('Apuestas pendientes de aprobación del administrador');
-      } else {
-        setBetList([...betList, ...newBets]);
-      }
-      setMultiLotteries([]);
-      setCurrentBet({ lottery: '', digits: '2', number: '', amount: '' });
-    }
-  };
+if (betMode === 'single') {
+if (!currentBet.lottery || !currentBet.number || !currentBet.amount) {
+alert('Complete todos los campos');
+return;
+}
 
+const digits = parseInt(currentBet.digits);
+if (currentBet.number.length !== digits) {
+alert(`El número debe tener exactamente ${digits} dígito${digits !== 1 ? 's' : ''}`);
+return;
+}
+
+// Validar según modalidad
+if (currentBet.digits === '1' && (parseInt(currentBet.number) < 0 || parseInt(currentBet.number) > 9)) {
+alert('Para 1 cifra, el número debe estar entre 0 y 9');
+return;
+}
+
+const amount = parseInt(currentBet.amount);
+const maxAmount = getMaxBetAmount(currentBet.digits, currentBet.type);
+
+if (amount > maxAmount) {
+alert(`El monto máximo para esta modalidad es $${maxAmount.toLocaleString()}`);
+return;
+}
+
+// Para 5 cifras, validar tipos especiales
+if (currentBet.digits === '5' && ['first4', 'first4combined'].includes(currentBet.type)) {
+if (currentBet.number.length !== 5) {
+alert('Para apuestas de 5 cifras con premios parciales, debes ingresar 5 dígitos completos');
+return;
+}
+}
+
+if (amount > 20000) {
+const newPendingBet = {
+id: Date.now(),
+seller: currentUser.username,
+...currentBet,
+status: 'pending',
+timestamp: new Date().toLocaleString()
+};
+setPendingBets([...pendingBets, newPendingBet]);
+alert('Apuesta pendiente de aprobación del administrador');
+} else {
+setBetList([...betList, { ...currentBet, id: Date.now() }]);
+}
+setCurrentBet({ lottery: '', digits: '2', number: '', amount: '', type: 'direct' });
+} else {
+if (multiLotteries.length === 0) {
+alert('Seleccione al menos una lotería');
+return;
+}
+const { digits, number, amount, type } = currentBet;
+if (!number || !amount) {
+alert('Complete el número y el monto');
+return;
+}
+const numDigits = parseInt(digits);
+if (number.length !== numDigits) {
+alert(`El número debe tener exactamente ${numDigits} dígito${numDigits !== 1 ? 's' : ''}`);
+return;
+}
+
+// Validar según modalidad para apuestas múltiples
+if (digits === '1' && (parseInt(number) < 0 || parseInt(number) > 9)) {
+alert('Para 1 cifra, el número debe estar entre 0 y 9');
+return;
+}
+
+const betAmount = parseInt(amount);
+const maxAmount = getMaxBetAmount(digits, type);
+
+if (betAmount > maxAmount) {
+alert(`El monto máximo para esta modalidad es $${maxAmount.toLocaleString()}`);
+return;
+}
+
+const newBets = multiLotteries.map(lotteryName => ({
+lottery: lotteryName,
+digits,
+number,
+amount,
+type,
+id: Date.now() + Math.random()
+}));
+if (betAmount > 20000) {
+const pendingBets = newBets.map(bet => ({
+...bet,
+seller: currentUser.username,
+status: 'pending',
+timestamp: new Date().toLocaleString()
+}));
+setPendingBets([...pendingBets, ...pendingBets]);
+alert('Apuestas pendientes de aprobación del administrador');
+} else {
+setBetList([...betList, ...newBets]);
+}
+setMultiLotteries([]);
+setCurrentBet({ lottery: '', digits: '2', number: '', amount: '', type: 'direct' });
+}
+};
   const handleRemoveBet = (betId) => {
     if (window.confirm('¿Está seguro que desea eliminar esta apuesta?')) {
       setBetList(betList.filter(bet => bet.id !== betId));
@@ -344,7 +374,24 @@ const App = () => {
       message += `Total: $${ticket.total.toLocaleString()}\n`;
       message += `Detalles de apuestas:\n`;
       ticket.bets.forEach((bet, index) => {
-        message += `${index + 1}. ${bet.lottery} - ${bet.number} (${bet.digits} cifras) - $${parseInt(bet.amount).toLocaleString()}\n`;
+      let betType = '';
+      if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
+      else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
+      else if (bet.digits === '3') {
+      betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
+      }
+      else if (bet.digits === '4') {
+      betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
+      }
+      else if (bet.digits === '5') {
+      betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
+      bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+      bet.type === 'first4' ? ' (4 Cifras Directas)' : 
+      ' (4 Cifras Combinadas)';
+      }
+
+      message += `${index + 1}. ${bet.lottery} - ${bet.number}${betType} - $${parseInt(bet.amount).toLocaleString()}
+      `;
       });
 
       setTicketToBeSent({
@@ -461,8 +508,24 @@ Tiquete #${index + 1}: ${ticket.ticketId}
         reportMessage += `Total: $${ticket.total.toLocaleString()}
 `;
         ticket.bets.forEach((bet, betIndex) => {
-          reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}
-`;
+        let betType = '';
+        if (bet.digits === '1') betType = ' (1 Cifra)';
+        else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
+        else if (bet.digits === '3') {
+        betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
+        }
+        else if (bet.digits === '4') {
+        betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
+        }
+        else if (bet.digits === '5') {
+        betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
+        bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+        bet.type === 'first4' ? ' (4 Cifras Directas)' : 
+        ' (4 Cifras Combinadas)';
+        }
+
+        reportMessage += `  ${betIndex + 1}. ${bet.lottery} - ${bet.number}${betType} - $${parseInt(bet.amount).toLocaleString()}
+        `;
         });
       });
       setPreviewReportData({
@@ -586,9 +649,11 @@ Tiquete #${index + 1}: ${ticket.ticketId}
 
   const handleNumberChange = (value) => {
     const digits = parseInt(currentBet.digits);
-    if (value.length <= digits) {
-      setCurrentBet({...currentBet, number: value});
+    let cleanedValue = value.replace(/\D/g, '');
+    if (cleanedValue.length > digits) {
+    cleanedValue = cleanedValue.substring(0, digits);
     }
+    setCurrentBet({...currentBet, number: cleanedValue});
   };
 
   const loadSellers = async () => {
@@ -916,6 +981,21 @@ COMISIÓN TOTAL: $${currentReport.totalCommission}
     let body = JSON.stringify(currentReport, null, 2);
     window.open(`mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
+
+  // Función para obtener el máximo permitido según modalidad
+const getMaxBetAmount = (digits, type) => {
+switch(digits) {
+case '1': return 100000; // Límite alto para una cifra
+case '2': return 200000; // Límite alto para dos cifras
+case '3': 
+return type === 'direct' ? 200000 : 200000;
+case '4': 
+return type === 'direct' ? 5000 : 200000; // Límite estricto para 4 cifras directo
+case '5': 
+return type === 'direct' ? 2000 : 200000;
+default: return 200000;
+}
+};
 
   if (showLogin) {
     return (
@@ -1596,25 +1676,120 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       <p className="text-red-600 text-sm mt-2">No hay loterías activas en este momento</p>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-gray-800 font-medium text-gray-700 mb-2">Modalidad (Cifras)</label>
-                    <select
-                      value={currentBet.digits}
-                      onChange={(e) => {
-                        const newDigits = e.target.value;
-                        setCurrentBet({
-                          ...currentBet, 
-                          digits: newDigits,
-                          number: currentBet.number.slice(0, parseInt(newDigits))
-                        });
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    >
-                      <option value="2">2 Cifras</option>
-                      <option value="3">3 Cifras</option>
-                      <option value="4">4 Cifras</option>
-                    </select>
-                  </div>
+<div className="space-y-4">
+<div>
+<label className="block text-sm font-medium text-gray-700 mb-2">Modalidad de Apuesta</label>
+<select
+value={currentBet.digits}
+onChange={(e) => {
+const newDigits = e.target.value;
+// Resetear tipo de apuesta cuando cambia la cantidad de cifras
+let newType = 'direct';
+if (newDigits === '1') newType = 'single'; // Una cifra no tiene tipo combinado
+if (newDigits === '3' || newDigits === '4' || newDigits === '5') newType = 'direct';
+
+setCurrentBet({
+...currentBet,
+digits: newDigits,
+type: newType,
+number: currentBet.number.slice(0, parseInt(newDigits))
+});
+}}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+>
+<option value="1">1 Cifra (Uña)</option>
+<option value="2">2 Cifras (Pata)</option>
+<option value="3">3 Cifras</option>
+<option value="4">4 Cifras</option>
+<option value="5">5 Cifras (Nueva)</option>
+</select>
+</div>
+
+{/* Tipos de apuesta según cifras seleccionadas */}
+{(currentBet.digits === '3' || currentBet.digits === '4' || currentBet.digits === '5') && (
+<div>
+<label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Apuesta</label>
+<select
+value={currentBet.type || 'direct'}
+onChange={(e) => setCurrentBet({...currentBet, type: e.target.value})}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+>
+<option value="direct">Directo (orden exacto)</option>
+<option value="combined">Combinado (cualquier orden)</option>
+{currentBet.digits === '5' && (
+<>
+<option value="first4">4 Cifras Directas</option>
+<option value="first4combined">4 Cifras Combinadas</option>
+</>
+)}
+</select>
+</div>
+)}
+
+<div>
+<label className="block text-sm font-medium text-white mb-2">
+{currentBet.digits === '1' && 'Número Apostado (0-9)'}
+{currentBet.digits === '2' && 'Número Apostado (00-99)'}
+{currentBet.digits === '3' && 'Número Apostado (000-999)'}
+{currentBet.digits === '4' && 'Número Apostado (0000-9999)'}
+{currentBet.digits === '5' && 'Número Apostado (00000-99999)'}
+</label>
+<input
+type="text"
+value={currentBet.number}
+onChange={(e) => handleNumberChange(e.target.value.replace(/\D/g, ''))}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+placeholder={`Ej: ${'12345'.substring(0, parseInt(currentBet.digits))}`}
+maxLength={parseInt(currentBet.digits)}
+/>
+<p className="text-sm text-white mt-1">
+{currentBet.digits === '1' && 'Ingresa un solo dígito (0-9)'}
+{currentBet.digits === '2' && 'Ingresa exactamente 2 dígitos'}
+{currentBet.digits === '3' && 'Ingresa exactamente 3 dígitos'}
+{currentBet.digits === '4' && 'Ingresa exactamente 4 dígitos'}
+{currentBet.digits === '5' && 'Ingresa exactamente 5 dígitos'}
+</p>
+</div>
+
+<div>
+<label className="block text-sm font-medium text-white mb-2">Valor de la Apuesta (COP)</label>
+<input
+type="number"
+value={currentBet.amount}
+onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+placeholder="Ej: 5000"
+min="100"
+/>
+{/* Mensajes de validación específicos por modalidad */}
+{parseInt(currentBet.amount) > getMaxBetAmount(currentBet.digits, currentBet.type) && (
+<p className="text-red-600 text-sm mt-2">
+Máximo permitido: ${getMaxBetAmount(currentBet.digits, currentBet.type).toLocaleString()} para esta modalidad
+</p>
+)}
+{currentBet.digits === '1' && parseInt(currentBet.amount) >= 1000 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 5).toLocaleString()} si ganas</p>
+)}
+{currentBet.digits === '2' && parseInt(currentBet.amount) >= 100 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 50).toLocaleString()} si ganas</p>
+)}
+{currentBet.digits === '3' && currentBet.type === 'direct' && parseInt(currentBet.amount) >= 100 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 400).toLocaleString()} si ganas</p>
+)}
+{currentBet.digits === '3' && currentBet.type === 'combined' && parseInt(currentBet.amount) >= 100 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 83).toLocaleString()} si ganas</p>
+)}
+{currentBet.digits === '4' && currentBet.type === 'direct' && parseInt(currentBet.amount) >= 100 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 4500).toLocaleString()} si ganas</p>
+)}
+{currentBet.digits === '4' && currentBet.type === 'combined' && parseInt(currentBet.amount) >= 100 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 208).toLocaleString()} si ganas</p>
+)}
+{currentBet.digits === '5' && currentBet.type === 'direct' && parseInt(currentBet.amount) >= 100 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 38000).toLocaleString()} si ganas</p>
+)}
+</div>
+</div>
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">Número Apostado</label>
                     <input
@@ -1799,29 +1974,40 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
               <h3 className="text-lg font-bold mb-4">Apuestas en el Tiquete</h3>
               <div className="space-y-3">
                 {betList.map(bet => (
-                  <div key={bet.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">{bet.lottery}</p>
-                        <p>Número: {bet.number} ({bet.digits} cifras)</p>
-                        <p>Valor: ${parseInt(bet.amount).toLocaleString()}</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {bet.status === 'pending' && (
-                          <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Pendiente
-                          </span>
-                        )}
-                        <button
-                          onClick={() => handleRemoveBet(bet.id)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition duration-300"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                <div key={bet.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div className="flex justify-between">
+                <div>
+                <p className="font-medium">{bet.lottery}</p>
+                <p>
+                Número: {bet.number} 
+                {bet.digits === '1' && ' (1 Cifra - Uña)'}
+                {bet.digits === '2' && ' (2 Cifras - Pata)'}
+                {bet.digits === '3' && (bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)')}
+                {bet.digits === '4' && (bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)')}
+                {bet.digits === '5' && (
+                bet.type === 'direct' ? ' (5 Cifras - Directo)' :
+                bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+                bet.type === 'first4' ? ' (4 Cifras Directas)' : ' (4 Cifras Combinadas)'
+                )}
+                </p>
+                <p>Valor: ${parseInt(bet.amount).toLocaleString()}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                {bet.status === 'pending' && (
+                <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                Pendiente
+                </span>
+                )}
+                <button
+                onClick={() => handleRemoveBet(bet.id)}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition duration-300"
+                >
+                Eliminar
+                </button>
+                </div>
+                </div>
+                </div>
+              ))}
               </div>
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex justify-between items-center">
@@ -2092,13 +2278,31 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   </div>
                   <h4 className="font-bold text-gray-800 mb-3">Apuestas:</h4>
                   <div className="space-y-2">
-                    {selectedTicketDetails.bets && selectedTicketDetails.bets.map((bet, idx) => (
-                      <div key={idx} className="border border-gray-200 rounded p-3 bg-gray-50">
-                        <p className="font-medium">{bet.lottery}</p>
-                        <p>Número: <span className="font-mono">{bet.number}</span> ({bet.digits} cifras)</p>
-                        <p>Monto: ${parseInt(bet.amount).toLocaleString()}</p>
-                      </div>
-                    ))}
+                    {selectedTicketDetails.bets && selectedTicketDetails.bets.map((bet, idx) => {
+                    let betType = '';
+                    if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
+                    else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
+                    else if (bet.digits === '3') {
+                    betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
+                    }
+                    else if (bet.digits === '4') {
+                    betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
+                    }
+                    else if (bet.digits === '5') {
+                    betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
+                    bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+                    bet.type === 'first4' ? ' (4 Cifras Directas)' : 
+                    ' (4 Cifras Combinadas)';
+                    }
+
+                    return (
+                    <div key={idx} className="border border-gray-200 rounded p-3 bg-gray-50">
+                    <p className="font-medium">{bet.lottery}</p>
+                    <p>Número: <span className="font-mono">{bet.number}</span>{betType}</p>
+                    <p>Monto: ${parseInt(bet.amount).toLocaleString()}</p>
+                    </div>
+                    );
+                    })}
                   </div>
                 </div>
                 <div className="p-6 border-t border-gray-200 text-right">

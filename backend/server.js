@@ -103,10 +103,16 @@ const findLotteryMatch = (ticketLottery, officialResults) => {
 const ticketSchema = new mongoose.Schema({
   ticketId: String,
   seller: String,
-  bets: Array,
+  bets: [{
+    lottery: String,
+    digits: String,
+    number: String,
+    amount: Number,
+    type: { type: String, default: 'direct' } // Nuevo campo para tipo de apuesta
+  }],
   total: Number,
   customerPhone: String,
-  customerName: { type: String, default: '' }, // ✅ NUEVO CAMPO
+  customerName: { type: String, default: '' },
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -177,11 +183,25 @@ app.post('/api/login', async (req, res) => {
 // Ruta para guardar un ticket
 app.post('/api/tickets', async (req, res) => {
   try {
-    const ticket = new Ticket(req.body);
+    const { bets } = req.body;
+    
+    // Validar que cada apuesta tenga el campo type
+    const validatedBets = bets.map(bet => ({
+      ...bet,
+      type: bet.type || 'direct' // Valor por defecto si no viene
+    }));
+    
+    const ticketData = {
+      ...req.body,
+      bets: validatedBets
+    };
+    
+    const ticket = new Ticket(ticketData);
     await ticket.save();
     res.status(201).json(ticket);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al guardar ticket:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
@@ -516,8 +536,49 @@ app.get('/api/winning-tickets', async (req, res) => {
           const lastDigits = result.winningNumber.slice(-digits);
           console.log(`🎯 Comparando: ${played} vs ${result.winningNumber} (últimos ${digits}: ${lastDigits})`);
           
-          if (lastDigits === played) {
-            console.log(`🎉 ¡GANADOR! Ticket ${ticket.ticketId} - ${bet.lottery} - ${played}`);
+          // Verificar según el tipo de apuesta
+          let isWinner = false;
+          let winningType = '';
+
+          if (bet.type === 'direct') {
+            // Para apuestas directas, debe coincidir exactamente
+            if (lastDigits === played) {
+              isWinner = true;
+              winningType = 'direct';
+            }
+          } else if (bet.type === 'combined') {
+            // Para apuestas combinadas, las cifras deben coincidir en cualquier orden
+            const playedDigits = played.split('').sort().join('');
+            const winningDigits = lastDigits.split('').sort().join('');
+            
+            if (playedDigits === winningDigits && played.length === lastDigits.length) {
+              isWinner = true;
+              winningType = 'combined';
+            }
+          } else if (bet.type === 'first4') {
+            // Para 5 cifras - 4 cifras directas (las primeras 4 del número jugado)
+            if (bet.digits === '5' && result.winningNumber.length >= 4) {
+              const first4Played = played.slice(0, 4);
+              const first4Winning = result.winningNumber.slice(0, 4);
+              if (first4Played === first4Winning) {
+                isWinner = true;
+                winningType = 'first4';
+              }
+            }
+          } else if (bet.type === 'first4combined') {
+            // Para 5 cifras - 4 cifras combinadas (las primeras 4 en cualquier orden)
+            if (bet.digits === '5' && result.winningNumber.length >= 4) {
+              const first4Played = played.slice(0, 4).split('').sort().join('');
+              const first4Winning = result.winningNumber.slice(0, 4).split('').sort().join('');
+              if (first4Played === first4Winning) {
+                isWinner = true;
+                winningType = 'first4combined';
+              }
+            }
+          }
+
+          if (isWinner) {
+            console.log(`🎉 ¡GANADOR (${winningType})! Ticket ${ticket.ticketId} - ${bet.lottery} - ${played} vs ${result.winningNumber}`);
             winningTickets.push({
               ticketId: ticket.ticketId,
               seller: ticket.seller,
@@ -525,8 +586,12 @@ app.get('/api/winning-tickets', async (req, res) => {
               lottery: bet.lottery,
               playedNumber: played,
               winningNumber: result.winningNumber,
+              betType: bet.type,
+              winningType: winningType,
+              digits: bet.digits,
               timestamp: ticket.timestamp
             });
+
           } else {
             console.log(`❌ No coincide: ${played} ≠ ${lastDigits}`);
           }
@@ -548,6 +613,7 @@ app.get('/api/winning-tickets', async (req, res) => {
 app.get('/api/lotteries/today', (req, res) => {
   // 📅 Lista de loterías con sus horarios (martes normal)
   const lotterySchedule = [
+    // LOTE R ÍAS TRADICIONALES
     { name: 'Antioqueñita Día', days: [1,2,3,4,5,6], time: '10:00', holidayTime: '12:00', sundayTime: '12:00' },
     { name: 'Antioqueñita Tarde', days: [0,1,2,3,4,5,6], time: '16:00', holidayTime: '16:00' },
     { name: 'Dorado Mañana', days: [1,2,3,4,5,6], time: '10:58' },
@@ -575,6 +641,8 @@ app.get('/api/lotteries/today', (req, res) => {
     { name: 'La Culona Día', days: [0,1,2,3,4,5,6], time: '14:30', holidayTime: '14:30' },
     { name: 'La Culona Noche', days: [0,1,2,3,4,5,6], time: '21:30', holidayTime: '20:00', sundayTime: '20:00' },
     { name: 'SuperMillonaria', days: [5], time: '23:00' },
+    
+    // LOTE R ÍAS REGIONALES
     { name: 'Lotería de Cundinamarca', days: [1,2], time: '22:30' },
     { name: 'Lotería de Tolima', days: [1,2], time: '22:30' },
     { name: 'Lotería Cruz Roja', days: [2], time: '22:30' },
@@ -589,7 +657,19 @@ app.get('/api/lotteries/today', (req, res) => {
     { name: 'Lotería Risaralda', days: [5], time: '23:00' },
     { name: 'Lotería de Boyacá', days: [6], time: '22:40' },
     { name: 'Lotería de Cauca', days: [6], time: '21:40' },
-    { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' }
+    { name: 'Extra de Colombia (Mensual)', days: [6], time: '23:00' },
+    
+    // 🔴 SUPERCHANCE - NUEVAS LOTE R ÍAS ESPECIALIZADAS POR MODALIDAD
+    { name: 'SuperChance 1 Cifra (Uña)', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 2 Cifras (Pata)', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 3 Cifras Directo', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 3 Cifras Combinado', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 4 Cifras Directo', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 4 Cifras Combinado', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 5 Cifras Directo', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 5 Cifras Combinado', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 5 Cifras - 4 Directas', days: [0,1,2,3,4,5,6], time: '19:00' },
+    { name: 'SuperChance 5 Cifras - 4 Combinadas', days: [0,1,2,3,4,5,6], time: '19:00' }
   ];
 
   // Obtiene el día de la semana de HOY en Colombia (0 = domingo, 1 = lunes, ..., 2 = martes)
@@ -606,7 +686,16 @@ app.get('/api/lotteries/today', (req, res) => {
         const lotteryTimeInMinutes = h * 60 + m;
         const fiveMinutesBefore = lotteryTimeInMinutes - 5;
         const active = currentTimeInMinutes < fiveMinutesBefore;
-        return { name: lottery.name, time: lottery.time, active };
+        return { 
+          name: lottery.name, 
+          time: lottery.time, 
+          active,
+          type: lottery.name.includes('SuperChance 1') ? '1' :
+                 lottery.name.includes('SuperChance 2') ? '2' :
+                 lottery.name.includes('SuperChance 3') ? '3' :
+                 lottery.name.includes('SuperChance 4') ? '4' :
+                 lottery.name.includes('SuperChance 5') ? '5' : 'all'
+        };
       }
       // Si no juega hoy, no se muestra
       return null;
