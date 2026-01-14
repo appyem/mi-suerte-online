@@ -1,4 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
+
 
 const App = () => {
   const [userRole, setUserRole] = useState(null);
@@ -45,6 +47,8 @@ const App = () => {
   const [showSendMethodModal, setShowSendMethodModal] = useState(false);
   const [ticketToBeSent, setTicketToBeSent] = useState(null);
   const [showTicketDetailsModal, setShowTicketDetailsModal] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [showImagePreview, setShowImagePreview] = useState(false);
   const [selectedTicketDetails, setSelectedTicketDetails] = useState(null);
   
   // 🔴 NUEVO: Estados para resultados y ganadores
@@ -338,183 +342,234 @@ setCurrentBet({ lottery: '', digits: '2', number: '', amount: '', type: 'direct'
   };
   
   const generateTicket = async () => {
-  setShowConfirmModal(false);
-  const ticketId = `TKT${Date.now()}`;
-  const total = betList.reduce((sum, bet) => sum + parseInt(bet.amount || 0), 0);
+setShowConfirmModal(false);
+const ticketId = `TKT${Date.now()}`;
+const total = betList.reduce((sum, bet) => sum + parseInt(bet.amount || 0), 0);
 
-  // Sanitizar y validar datos antes de enviar
-  try {
-  // Validar apuestas
-  if (betList.length === 0) {
-  throw new Error('No hay apuestas para generar el ticket');
-  }
+// Sanitizar y validar datos antes de enviar
+try {
+// Validar apuestas
+if (betList.length === 0) {
+throw new Error('No hay apuestas para generar el ticket');
+}
 
-  if (!customerPhone || customerPhone.trim() === '') {
-  throw new Error('Por favor ingrese el número del cliente');
-  }
+if (!customerPhone || customerPhone.trim() === '') {
+throw new Error('Por favor ingrese el número del cliente');
+}
 
-  // Sanitizar cada apuesta
-  const sanitizedBets = betList.map(bet => {
-  // Validar que el número tenga la longitud correcta
-  const digits = parseInt(bet.digits || '2');
-  let cleanedNumber = bet.number.replace(/\D/g, '');
-  if (cleanedNumber.length > digits) {
-  cleanedNumber = cleanedNumber.substring(0, digits);
-  }
-  if (cleanedNumber.length < digits) {
-  cleanedNumber = cleanedNumber.padStart(digits, '0');
-  }
+// Sanitizar cada apuesta
+const sanitizedBets = betList.map(bet => {
+// Validar que el número tenga la longitud correcta
+const digits = parseInt(bet.digits || '2');
+let cleanedNumber = bet.number.replace(/\D/g, '');
+if (cleanedNumber.length > digits) {
+cleanedNumber = cleanedNumber.substring(0, digits);
+}
+if (cleanedNumber.length < digits) {
+cleanedNumber = cleanedNumber.padStart(digits, '0');
+}
 
-  // Asegurar que el tipo de apuesta exista
-  const validTypes = ['direct', 'combined', 'first4', 'first4combined', 'single'];
-  const betType = validTypes.includes(bet.type) ? bet.type : 'direct';
+// Asegurar que el tipo de apuesta exista
+const validTypes = ['direct', 'combined', 'first4', 'first4combined', 'single'];
+const betType = validTypes.includes(bet.type) ? bet.type : 'direct';
 
-  return {
-  lottery: bet.lottery.trim(),
-  digits: digits.toString(),
-  number: cleanedNumber,
-  amount: parseInt(bet.amount || 0),
-  type: betType
-  };
-  });
+return {
+lottery: bet.lottery.trim(),
+digits: digits.toString(),
+number: cleanedNumber,
+amount: parseInt(bet.amount || 0),
+type: betType
+};
+});
 
-  // Sanitizar teléfono del cliente
-  let cleanedPhone = customerPhone.replace(/\D/g, '');
-  if (cleanedPhone.length < 10) {
-  throw new Error('El número de teléfono debe tener al menos 10 dígitos');
-  }
-  if (cleanedPhone.length > 10) {
-  cleanedPhone = cleanedPhone.substring(cleanedPhone.length - 10);
-  }
+// Sanitizar teléfono del cliente
+let cleanedPhone = customerPhone.replace(/\D/g, '');
+if (cleanedPhone.length < 10) {
+throw new Error('El número de teléfono debe tener al menos 10 dígitos');
+}
+if (cleanedPhone.length > 10) {
+cleanedPhone = cleanedPhone.substring(cleanedPhone.length - 10);
+}
 
-  const response = await fetch(`${BACKEND_URL}/api/tickets`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-  seller: currentUser.username,
-  bets: sanitizedBets,
-  total: total,
-  customerPhone: cleanedPhone,
-  customerName: customerName.trim() || 'Cliente'
-  }),
-  });
+// Preparar datos del ticket para generar imagen
+const ticketData = {
+ticketId,
+seller: currentUser.username,
+bets: sanitizedBets,
+total,
+customerPhone: cleanedPhone,
+customerName: customerName.trim() || 'Cliente',
+timestamp: new Date()
+};
 
-  if (!response.ok) {
-  const errorData = await response.json();
-  console.error('Error del servidor:', errorData);
-  throw new Error(errorData.details || 'Error al guardar el ticket');
-  }
+// Generar imagen del ticket
+let ticketImage = null;
+try {
+ticketImage = await generateTicketImage(ticketData);
+} catch (imageError) {
+console.warn('No se pudo generar imagen del ticket, usando formato de texto:', imageError);
+}
 
-  const savedTicket = await response.json();
-  console.log('✅ Ticket guardado exitosamente:', savedTicket);
+const response = await fetch(`${BACKEND_URL}/api/tickets`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+...ticketData,
+imageUrl: ticketImage // Incluir la imagen en base64 si se generó correctamente
+}),
+});
 
-  // Generar mensaje para WhatsApp/SMS
-  let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀
-  `;
-  message += `Tiquete: ${savedTicket.ticketId}
-  `;
-  message += `Fecha: ${new Date(savedTicket.timestamp).toLocaleString('es-CO')}
-  `;
-  message += `Vendedor: ${savedTicket.seller}
-  `;
-  message += `Total: $${savedTicket.total.toLocaleString()}
-  `;
-  message += `Detalles de apuestas:
-  `;
+if (!response.ok) {
+const errorData = await response.json();
+console.error('Error del servidor:', errorData);
+throw new Error(errorData.details || 'Error al guardar el ticket');
+}
 
-  savedTicket.bets.forEach((bet, index) => {
-  let betType = '';
-  if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
-  else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
-  else if (bet.digits === '3') {
-  betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
-  }
-  else if (bet.digits === '4') {
-  betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
-  }
-  else if (bet.digits === '5') {
-  betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
-  bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
-  bet.type === 'first4' ? ' (4 Cifras Directas)' : 
-  ' (4 Cifras Combinadas)';
-  }
+const savedTicket = await response.json();
+console.log('✅ Ticket guardado exitosamente:', savedTicket);
 
-  message += `${index + 1}. ${bet.lottery} - ${bet.number}${betType} - $${bet.amount.toLocaleString()}
-  `;
-  });
+// Preparar datos para envío
+setTicketToBeSent({
+ticket: savedTicket,
+image: ticketImage, // La imagen generada (puede ser null si falló)
+customerName: savedTicket.customerName,
+customerPhone: savedTicket.customerPhone
+});
 
-  setTicketToBeSent({
-  ticket: savedTicket,
-  message,
-  customerName: savedTicket.customerName,
-  customerPhone: savedTicket.customerPhone
-  });
+setShowSendMethodModal(true);
 
-  setShowSendMethodModal(true);
+// Actualizar el estado local con el ticket guardado
+setTodayTickets(prev => [...prev, savedTicket]);
+setBetList([]);
+setCustomerPhone('');
+setCustomerName('');
 
-  // Actualizar el estado local con el ticket guardado
-  setTodayTickets(prev => [...prev, savedTicket]);
-  setBetList([]);
-  setCustomerPhone('');
-  setCustomerName('');
+alert('¡Ticket generado exitosamente!');
 
-  alert('¡Ticket generado exitosamente!');
-  } catch (error) {
-  console.error('❌ Error completo al generar ticket:', error);
-  let errorMessage = 'Error al guardar el ticket. Por favor verifica:';
-  if (error.message.includes('telefono')) {
-  errorMessage = 'El número de teléfono no es válido. Debe tener 10 dígitos.';
-  } else if (error.message.includes('apuestas')) {
-  errorMessage = 'No hay apuestas válidas en el ticket.';
-  } else if (error.message.includes('monto')) {
-  errorMessage = 'Uno o más montos son inválidos.';
-  } else {
-  errorMessage = error.message || 'Error desconocido. Intente nuevamente.';
-  }
-  alert(errorMessage);
-  setShowConfirmModal(true); // Mostrar modal de confirmación nuevamente para corrección
-  }
-  };
+} catch (error) {
+console.error('❌ Error completo al generar ticket:', error);
+let errorMessage = 'Error al guardar el ticket. Por favor verifica:';
+if (error.message.includes('telefono')) {
+errorMessage = 'El número de teléfono no es válido. Debe tener 10 dígitos.';
+} else if (error.message.includes('apuestas')) {
+errorMessage = 'No hay apuestas válidas en el ticket.';
+} else if (error.message.includes('monto')) {
+errorMessage = 'Uno o más montos son inválidos.';
+} else {
+errorMessage = error.message || 'Error desconocido. Intente nuevamente.';
+}
+alert(errorMessage);
+setShowConfirmModal(true); // Mostrar modal de confirmación nuevamente para corrección
+}
+};
+
+
+
+const sendTicketByMethod = (method) => {
+if (!ticketToBeSent) return;
+const { ticket, image, customerPhone } = ticketToBeSent;
+if (method === 'whatsapp') {
+if (image) {
+// Método CORRECTO para enviar imagen por WhatsApp
+const waUrl = `https://wa.me/57${customerPhone}?text=${encodeURIComponent('¡Aquí está tu ticket de Mi Suerte Online! 🍀')}`;
+const waLink = document.createElement('a');
+waLink.href = waUrl;
+waLink.target = '_blank';
+waLink.rel = 'noopener noreferrer';
+document.body.appendChild(waLink);
+waLink.click();
+document.body.removeChild(waLink);
+// Mostrar alerta explicando que debe adjuntar la imagen manualmente
+alert('Se abrirá WhatsApp con el mensaje preparado. Por favor, adjunta la imagen del ticket que se mostrará a continuación.');
+// Mostrar la imagen para que el vendedor la copie/pegue
+setPreviewImage(image);
+setShowImagePreview(true);
+} else {
+// Mensaje de texto como fallback
+let message = `¡Gracias por jugar con Mi Suerte Online${ticket.customerName ? `, ${ticket.customerName}` : ''}! 🍀
+`;
+message += `Tiquete: ${ticket.ticketId}
+`;
+message += `Fecha: ${new Date(ticket.timestamp).toLocaleString('es-CO')}
+`;
+message += `Vendedor: ${ticket.seller}
+`;
+message += `Total: $${ticket.total.toLocaleString()}
+`;
+message += `Detalles de apuestas:
+`;
+ticket.bets.forEach((bet, index) => {
+let betType = '';
+if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
+else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
+else if (bet.digits === '3') {
+betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
+}
+else if (bet.digits === '4') {
+betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
+}
+else if (bet.digits === '5') {
+betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' :
+bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+bet.type === 'first4' ? ' (4 Cifras Directas)' :
+' (4 Cifras Combinadas)';
+}
+message += `${index + 1}. ${bet.lottery} - ${bet.number}${betType} - $${bet.amount.toLocaleString()}
+`;
+});
+openWhatsApp(customerPhone, message);
+}
+} else if (method === 'sms') {
+// SMS: mensaje CORTO y compatible
+let smsMessage = `Mi Suerte Online 🍀
+`;
+ticket.bets.forEach((bet, index) => {
+smsMessage += `${index + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
+});
+smsMessage += `Total: $${ticket.total.toLocaleString()}\n`;
+// Asegurar que el mensaje no exceda ~160 caracteres (ideal para SMS)
+if (smsMessage.length > 160) {
+// Versión ultra corta si hay muchas apuestas
+smsMessage = `Tiquete ${ticket.ticketId}: ${ticket.bets.length} apuestas. Total: $${ticket.total.toLocaleString()}`;
+}
+openSMS(customerPhone, smsMessage);
+}
+setShowSendMethodModal(false);
+};
+
+
+// Función para copiar imagen al portapapeles
+const copyImageToClipboard = async (imageUrl) => {
+try {
+const response = await fetch(imageUrl);
+const blob = await response.blob();
+const item = new ClipboardItem({ 'image/png': blob });
+navigator.clipboard.write([item]);
+alert('Imagen copiada al portapapeles. Péguela en WhatsApp.');
+return true;
+} catch (error) {
+console.error('Error al copiar imagen:', error);
+return false;
+}
+};
+
+
+const sendReport = () => {
+openWhatsApp(previewReportData.phone, previewReportData.message);
+try {
+fetch(`${BACKEND_URL}/api/payments`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(previewReportData.paymentData),
+});
+} catch (paymentError) {
+console.warn('No se pudo registrar el pago:', paymentError);
+}
+setShowPreviewModal(false);
+alert('Reporte enviado exitosamente');
+};
   
-  const sendTicketByMethod = (method) => {
-    if (!ticketToBeSent) return;
-    
-    const { ticket, customerPhone } = ticketToBeSent;
-    
-    if (method === 'whatsapp') {
-      openWhatsApp(customerPhone, ticketToBeSent.message);
-    } else if (method === 'sms') {
-      // SMS: mensaje CORTO y compatible
-      let smsMessage = `Mi Suerte Online 🍀\n`;
-      ticket.bets.forEach((bet, index) => {
-        smsMessage += `${index + 1}. ${bet.lottery} - ${bet.number} - $${parseInt(bet.amount).toLocaleString()}\n`;
-      });
-      smsMessage += `Total: $${ticket.total.toLocaleString()}`;
-    
-      // Asegurar que el mensaje no exceda ~160 caracteres (ideal para SMS)
-      if (smsMessage.length > 160) {
-        // Versión ultra corta si hay muchas apuestas
-        smsMessage = `Tiquete ${ticket.ticketId}: ${ticket.bets.length} apuestas. Total: $${ticket.total.toLocaleString()}`;
-      }
-    
-      openSMS(customerPhone, smsMessage);
-    }
-    setShowSendMethodModal(false);
-  };
-  const sendReport = () => {
-    openWhatsApp(previewReportData.phone, previewReportData.message);
-    try {
-      fetch(`${BACKEND_URL}/api/payments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(previewReportData.paymentData),
-      });
-    } catch (paymentError) {
-      console.warn('No se pudo registrar el pago:', paymentError);
-    }
-    setShowPreviewModal(false);
-    alert('Reporte enviado exitosamente');
-  };
+  
 
   const dailyClose = async () => {
     const today = getColombiaDate(); // ✅ Usar fecha de Colombia
@@ -697,6 +752,75 @@ Tiquete #${index + 1}: ${ticket.ticketId}
       alert(`Error al generar el reporte: ${error.message || 'Verifique la conexión'}`);
     }
   };
+
+
+  // Función para generar la imagen del ticket
+const generateTicketImage = async (ticketData) => {
+try {
+// Llenar los datos en el componente de vista previa
+document.getElementById('ticket-id-preview').textContent = ticketData.ticketId;
+document.getElementById('ticket-date-preview').textContent = new Date(ticketData.timestamp).toLocaleString('es-CO');
+document.getElementById('ticket-seller-preview').textContent = ticketData.seller;
+document.getElementById('ticket-customer-preview').textContent = ticketData.customerName || 'Cliente';
+document.getElementById('ticket-phone-preview').textContent = `+57${ticketData.customerPhone}`;
+document.getElementById('ticket-total-preview').textContent = `$${ticketData.total.toLocaleString()}`;
+  
+// Limpiar y llenar las apuestas
+const betsContainer = document.getElementById('ticket-bets-preview');
+betsContainer.innerHTML = '';
+  
+ticketData.bets.forEach((bet, index) => {
+let betType = '';
+if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
+else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
+else if (bet.digits === '3') {
+betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
+}
+else if (bet.digits === '4') {
+betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
+}
+else if (bet.digits === '5') {
+betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' :
+bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+bet.type === 'first4' ? ' (4 Cifras Directas)' : 
+' (4 Cifras Combinadas)';
+}
+  
+const betElement = document.createElement('div');
+betElement.className = 'border-b border-dashed border-gray-300 pb-2 last:border-b-0 last:pb-0';
+betElement.innerHTML = `
+<div className="flex justify-between">
+<span className="font-medium">${index + 1}. ${bet.lottery}</span>
+</div>
+<div className="flex justify-between text-sm">
+<span>N°: <span className="font-mono font-bold text-green-700">${bet.number}</span>${betType}</span>
+<span className="font-bold text-blue-600">$${parseInt(bet.amount).toLocaleString()}</span>
+</div>
+`;
+betsContainer.appendChild(betElement);
+});
+  
+// Esperar un momento para que el DOM se actualice
+await new Promise(resolve => setTimeout(resolve, 100));
+  
+// Capturar el elemento como imagen
+const ticketElement = document.querySelector('#ticket-preview > div');
+const canvas = await html2canvas(ticketElement, {
+scale: 2,
+backgroundColor: '#ffffff',
+logging: false
+});
+  
+// Convertir canvas a imagen base64
+const imageUrl = canvas.toDataURL('image/png');
+return imageUrl;
+  
+} catch (error) {
+console.error('Error generando imagen de ticket:', error);
+// En caso de error, usar el mensaje de texto como fallback
+return null;
+}
+};
 
   const logout = () => {
     setUserRole(null);
@@ -2694,6 +2818,111 @@ Cerrar
       </div>
     );
   }
+
+  {/* Componente invisible para generar la imagen del ticket */}
+<div id="ticket-preview" className="hidden">
+  <div className="bg-white rounded-xl shadow-lg border-2 border-green-500 p-6 max-w-md mx-auto">
+    <div className="text-center mb-4">
+      <div className="flex justify-center mb-2">
+        <span className="text-green-600 text-4xl">🍀</span>
+        <span className="text-yellow-500 text-3xl mx-1">💰</span>
+        <span className="text-green-600 text-4xl">🍀</span>
+      </div>
+      <h1 className="text-2xl font-bold text-green-800">MI SUERTE ONLINE</h1>
+      <p className="text-gray-600 text-sm mt-1">Sistema de Apuestas Autorizado</p>
+      <div className="h-1 bg-gradient-to-r from-green-400 to-yellow-400 my-2"></div>
+    </div>
+    
+    <div className="mb-4">
+      <div className="flex justify-between text-sm">
+        <span className="font-medium">Ticket:</span>
+        <span id="ticket-id-preview" className="font-mono">TKT{Date.now()}</span>
+      </div>
+      <div className="flex justify-between text-sm mt-1">
+        <span className="font-medium">Fecha:</span>
+        <span id="ticket-date-preview">{new Date().toLocaleString('es-CO')}</span>
+      </div>
+      <div className="flex justify-between text-sm mt-1">
+        <span className="font-medium">Vendedor:</span>
+        <span id="ticket-seller-preview" className="font-medium text-blue-600">Vendedor</span>
+      </div>
+    </div>
+    
+    <div className="bg-gray-50 rounded-lg p-3 mb-4">
+      <div className="flex justify-between items-center">
+        <span className="font-medium text-gray-700">Cliente:</span>
+        <span id="ticket-customer-preview" className="font-medium text-green-700">Cliente</span>
+      </div>
+      <div className="flex justify-between items-center mt-1">
+        <span className="font-medium text-gray-700">Teléfono:</span>
+        <span id="ticket-phone-preview" className="text-sm text-blue-600">+573001234567</span>
+      </div>
+    </div>
+    
+    <h3 className="text-lg font-bold text-center text-green-700 mb-2">DETALLES DE APUESTAS</h3>
+    <div id="ticket-bets-preview" className="space-y-2 mb-4">
+      {/* Las apuestas se llenarán dinámicamente */}
+    </div>
+    
+    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+      <div className="flex justify-between font-bold text-lg">
+        <span>Total:</span>
+        <span id="ticket-total-preview" className="text-green-700">$0</span>
+      </div>
+      <p className="text-xs text-green-600 text-center mt-1">¡Mucha suerte! 🍀</p>
+    </div>
+    
+    <div className="text-center">
+      <div className="flex justify-center mb-2">
+        <span className="text-yellow-500 text-3xl">💰</span>
+        <span className="text-green-600 text-4xl mx-1">🍀</span>
+        <span className="text-yellow-500 text-3xl">💰</span>
+      </div>
+      <p className="text-xs text-gray-500 italic">Este ticket es válido solo con el sello del vendedor</p>
+      <p className="text-xs text-gray-500 italic mt-1">Apuestas responsables. Prohibida su venta a menores de edad.</p>
+      <div className="h-1 bg-gradient-to-r from-yellow-400 to-green-400 my-2"></div>
+      <p className="text-xs font-bold text-green-800">WWW.MISUERTEONLINE.COM</p>
+    </div>
+  </div>
+</div>
+
+{/* Modal para vista previa de imagen del ticket */}
+{showImagePreview && previewImage && (
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+<div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+<div className="p-6 border-b border-gray-200 flex justify-between items-center">
+<h3 className="text-xl font-bold text-gray-900">Vista Previa del Ticket</h3>
+<button
+onClick={() => setShowImagePreview(false)}
+className="text-gray-500 hover:text-gray-700 font-bold"
+>
+×
+</button>
+</div>
+<div className="p-6 text-center">
+<img 
+src={previewImage} 
+alt="Ticket de Mi Suerte Online" 
+className="max-w-full max-h-[60vh] rounded-lg shadow-lg border-2 border-green-500"
+/>
+<p className="mt-4 text-gray-600 text-sm">
+Copie esta imagen y adjúntela manualmente en WhatsApp después de enviar el mensaje inicial.
+</p>
+</div>
+<div className="p-6 border-t border-gray-200 text-center">
+<button
+onClick={() => {
+setShowImagePreview(false);
+alert('¡Listo! Ahora puede cerrar esta ventana y adjuntar la imagen en WhatsApp.');
+}}
+className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition duration-300 font-semibold"
+>
+Cerrar y Adjuntar en WhatsApp
+</button>
+</div>
+</div>
+</div>
+)}
 
   return null;
 };
