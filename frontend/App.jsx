@@ -729,36 +729,67 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   const loadTickets = async () => {
-    try {
-      let url = `${BACKEND_URL}/api/tickets`;
-      if (userRole === 'seller' && currentUser) {
-        url += `?seller=${currentUser.username}`;
-      }
-      const response = await fetch(url);
-      if (response.ok) {
-        const ticketsData = await response.json();
-        if (userRole === 'admin') {
-          setTickets(ticketsData);
-        }
-        const today = getColombiaDate(); // ✅ Fecha correcta de Colombia
-        // 🔧 CORREGIDO: comparar en formato ISO (UTC) para consistencia con backend
-        const todayTicketsFromDB = ticketsData
-          .filter(t => {
-            const ticketDateColombia = new Date(t.timestamp).toLocaleDateString('sv-SE', {
-              timeZone: 'America/Bogota'
-			});
-			return ticketDateColombia === today;
-          })
-          .map(t => ({
-			...t,
-			customerName: t.customerName || '' // ✅ USAR EL NOMBRE DE LA BD
-		  }));	
-        setTodayTickets(todayTicketsFromDB);
-      }
-    } catch (error) {
-      console.error('Error al cargar tickets:', error);
-    }
-  };
+try {
+const today = getColombiaDate();
+let url = `${BACKEND_URL}/api/tickets?date=${today}`;
+
+// Para vendedores, filtrar por su usuario
+if (userRole === 'seller' && currentUser) {
+url += `&seller=${currentUser.username}`;
+}
+
+const response = await fetch(url);
+if (!response.ok) {
+throw new Error(`Error HTTP: ${response.status}`);
+}
+
+const ticketsData = await response.json();
+console.log('_tickets cargados:', ticketsData.length);
+
+if (userRole === 'admin') {
+setTickets(ticketsData);
+}
+
+// Para ambos roles, establecer los tickets de hoy
+setTodayTickets(ticketsData.map(t => ({
+...t,
+customerName: t.customerName || t.customerPhone || 'Cliente'
+})));
+
+} catch (error) {
+console.error('❌ Error al cargar tickets:', error);
+// Si falla, intentar con rango de fechas como fallback
+try {
+const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
+const startDate = today;
+const endDate = today;
+
+let url = `${BACKEND_URL}/api/tickets?startDate=${startDate}&endDate=${endDate}`;
+if (userRole === 'seller' && currentUser) {
+url += `&seller=${currentUser.username}`;
+}
+
+const fallbackResponse = await fetch(url);
+if (fallbackResponse.ok) {
+const fallbackData = await fallbackResponse.json();
+setTodayTickets(fallbackData.map(t => ({
+...t,
+customerName: t.customerName || t.customerPhone || 'Cliente'
+})));
+if (userRole === 'admin') {
+setTickets(fallbackData);
+}
+console.log('✅ Carga fallback exitosa');
+} else {
+// Mostrar alerta solo en el frontend, no en consola
+console.log('⚠️ No se pudieron cargar los tickets. Verifica tu conexión.');
+}
+} catch (fallbackError) {
+console.error('❌ Error en carga fallback:', fallbackError);
+alert('Error al cargar los tickets. Verifica tu conexión a internet.');
+}
+}
+};
 
   const loadPayments = async () => {
     try {
@@ -810,19 +841,49 @@ Tiquete #${index + 1}: ${ticket.ticketId}
   };
 
   useEffect(() => {
-    if (userRole === 'admin') {
-      loadSellers();
-      loadTickets();
-      loadPayments();
-      loadLotteryResults();    // ✅ NUEVO
-      loadWinningTickets();    // ✅ NUEVO
-    } else if (userRole === 'seller') {
-      loadSellers();
-      loadTickets();
-      loadLotteryResults();    // ✅ NUEVO
-      loadWinningTickets();    // ✅ NUEVO
-    }
-  }, [userRole]);
+const loadData = async () => {
+try {
+if (userRole === 'admin') {
+await Promise.all([
+loadSellers(),
+loadTickets(),
+loadPayments(),
+loadLotteryResults(),
+loadWinningTickets()
+]);
+} else if (userRole === 'seller') {
+await Promise.all([
+loadSellers(),
+loadTickets(),
+loadLotteryResults(),
+loadWinningTickets()
+]);
+}
+} catch (error) {
+console.error('Error al cargar datos del panel:', error);
+alert('Error al cargar los datos del panel. Por favor recarga la página.');
+}
+};
+
+if (userRole) {
+loadData();
+}
+}, [userRole]);
+
+// Agregar useEffect separado para recargar datos periódicamente
+useEffect(() => {
+if (userRole === 'admin') {
+const interval = setInterval(() => {
+loadSellers();
+loadTickets();
+loadPayments();
+loadLotteryResults();
+loadWinningTickets();
+}, 30000); // Cada 30 segundos
+
+return () => clearInterval(interval);
+}
+}, [userRole]);
 
   const openResendModal = (ticket) => {
     setResendTicketData({
@@ -1151,37 +1212,79 @@ default: return 200000;
           {/* Contenido principal */}
           <div className="bg-gradient-to-br from-gray-800 to-emerald-900/30 border border-emerald-500/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-lg shadow-emerald-500/10">
           {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
-                <p className="mt-2 text-3xl font-bold text-green-600">
-                  ${tickets.filter(t => 
-                    new Date(t.timestamp).toISOString().split('T')[0] === getColombiaDate()
-                  ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
-                <p className="mt-2 text-3xl font-bold text-blue-600">
-                  {tickets.filter(t => 
-                    new Date(t.timestamp).toISOString().split('T')[0] === getColombiaDate()
-                  ).length}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Premios por Pagar</h3>
-                <p className="mt-2 text-3xl font-bold text-orange-600">$0</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500">Balance de Hoy</h3>
-                <p className="mt-2 text-3xl font-bold text-purple-600">
-                  ${tickets.filter(t => 
-                    new Date(t.timestamp).toISOString().split('T')[0] === getColombiaDate()
-                  ).reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          )}
+<div>
+<div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+{['admin'].includes(userRole) && (
+<>
+<div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+<h3 className="text-sm font-medium text-gray-500">Ventas de Hoy</h3>
+<p className="mt-2 text-3xl font-bold text-green-700">
+${todayTickets.reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
+</p>
+<p className="text-sm text-gray-500 mt-1">Tiquetes: {todayTickets.length}</p>
+</div>
+<div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+<h3 className="text-sm font-medium text-gray-500">Tiquetes de Hoy</h3>
+<p className="mt-2 text-3xl font-bold text-blue-700">
+{todayTickets.length}
+</p>
+<p className="text-sm text-gray-500 mt-1">Promedio: ${todayTickets.length > 0 ? Math.round(todayTickets.reduce((sum, ticket) => sum + ticket.total, 0) / todayTickets.length).toLocaleString() : '0'}
+</p>
+</div>
+<div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-orange-500">
+<h3 className="text-sm font-medium text-gray-500">Vendedores Activos</h3>
+<p className="mt-2 text-3xl font-bold text-orange-700">
+{sellers.filter(s => s.active).length}
+</p>
+<p className="text-sm text-gray-500 mt-1">de {sellers.length} totales</p>
+</div>
+<div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+<h3 className="text-sm font-medium text-gray-500">Balance del Día</h3>
+<p className="mt-2 text-3xl font-bold text-purple-700">
+${todayTickets.reduce((sum, ticket) => sum + ticket.total, 0).toLocaleString()}
+</p>
+<p className="text-sm text-gray-500 mt-1">Última actualización: {new Date().toLocaleTimeString('es-CO')}</p>
+</div>
+</>
+)}
+</div>
+
+{/* Tabla de ventas recientes */}
+<div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+<h2 className="text-xl font-bold text-gray-900 mb-4">Últimas Ventas</h2>
+{todayTickets.length === 0 ? (
+<p className="text-gray-500 text-center py-8">No hay ventas registradas hoy.</p>
+) : (
+<div className="overflow-x-auto">
+<table className="min-w-full divide-y divide-gray-200">
+<thead className="bg-gray-50">
+<tr>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ticket</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Vendedor</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Cliente</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Total</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Hora</th>
+</tr>
+</thead>
+<tbody className="divide-y divide-gray-200">
+{todayTickets.slice(0, 10).map((ticket, index) => (
+<tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.ticketId}</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.seller}</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.customerName || 'Sin nombre'}</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-700">${ticket.total.toLocaleString()}</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+{new Date(ticket.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+</td>
+</tr>
+))}
+</tbody>
+</table>
+</div>
+)}
+</div>
+</div>
+)}
 
 {activeTab === 'reports' && (
 <div className="space-y-8">
@@ -1430,42 +1533,125 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
         </div>
         </div>
         {showReportModal && currentReport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-xl font-bold text-gray-900">{currentReport.title}</h3>
-                <p className="text-gray-600">Período: {currentReport.period}</p>
-              </div>
-              <div className="p-6">
-                <pre className="bg-gray-100 p-4 rounded text-sm overflow-auto">
-                  {JSON.stringify(currentReport, null, 2)}
-                </pre>
-              </div>
-              <div className="p-6 border-t border-gray-200">
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={downloadReport}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300"
-                  >
-                    Descargar
-                  </button>
-                  <button
-                    onClick={sendByWhatsApp}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300"
-                  >
-                    Enviar por WhatsApp
-                  </button>
-                  <button
-                    onClick={() => setShowReportModal(false)}
-                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition duration-300"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+<div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-xl">
+<div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+<h3 className="text-2xl font-bold text-gray-800">{currentReport.title}</h3>
+<p className="text-gray-600 font-medium mt-1">Período: {currentReport.period}</p>
+</div>
+<div className="p-6">
+{reportType === 'sales' ? (
+<div className="space-y-6">
+<div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+<div>
+<p className="text-sm font-medium text-gray-600">Ventas Totales</p>
+<p className="text-2xl font-bold text-green-700 mt-1">${currentReport.totalSales}</p>
+</div>
+<div>
+<p className="text-sm font-medium text-gray-600">Número de Tiquetes</p>
+<p className="text-2xl font-bold text-blue-700 mt-1">{currentReport.ticketCount}</p>
+</div>
+<div>
+<p className="text-sm font-medium text-gray-600">Promedio por Tiquete</p>
+<p className="text-2xl font-bold text-purple-700 mt-1">${Math.round(currentReport.totalSales / currentReport.ticketCount).toLocaleString()}</p>
+</div>
+</div>
+</div>
+
+<div className="mt-6">
+<h4 className="text-lg font-bold text-gray-800 mb-3">Ventas por Vendedor:</h4>
+<div className="space-y-3">
+{currentReport.sellers && currentReport.sellers.map((seller, index) => (
+<div key={index} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+<div className="flex justify-between items-start">
+<div>
+<p className="font-medium text-gray-800">{seller.name || seller.seller}</p>
+<p className="text-sm text-gray-600">Tiquetes: {seller.tickets}</p>
+</div>
+<div className="text-right">
+<p className="font-bold text-green-700 text-lg">${seller.sales.toLocaleString()}</p>
+<p className="text-xs text-gray-500">Promedio: ${Math.round(seller.sales / seller.tickets).toLocaleString()}</p>
+</div>
+</div>
+</div>
+))}
+</div>
+</div>
+</div>
+) : reportType === 'payments' ? (
+<div className="space-y-6">
+<div className="bg-green-50 rounded-xl p-4 border border-green-100">
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+<div>
+<p className="text-sm font-medium text-gray-600">Total Pagado</p>
+<p className="text-2xl font-bold text-green-700 mt-1">${currentReport.totalPaid}</p>
+</div>
+<div>
+<p className="text-sm font-medium text-gray-600">Comisión Total</p>
+<p className="text-2xl font-bold text-orange-700 mt-1">${currentReport.totalCommission}</p>
+</div>
+<div>
+<p className="text-sm font-medium text-gray-600">Número de Pagos</p>
+<p className="text-2xl font-bold text-blue-700 mt-1">{currentReport.paymentCount}</p>
+</div>
+</div>
+</div>
+
+<div className="mt-6">
+<h4 className="text-lg font-bold text-gray-800 mb-3">Pagos por Vendedor:</h4>
+<div className="space-y-3">
+{currentReport.sellers && currentReport.sellers.map((seller, index) => (
+<div key={index} className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+<div className="flex justify-between items-start">
+<div>
+<p className="font-medium text-gray-800">{seller.name}</p>
+<p className="text-sm text-gray-600">Comisión: ${seller.commission}</p>
+</div>
+<div className="text-right">
+<p className="font-bold text-green-700 text-lg">${seller.paid}</p>
+<p className="text-xs text-gray-500">{seller.payments} pago(s)</p>
+</div>
+</div>
+</div>
+))}
+</div>
+</div>
+</div>
+) : (
+<div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+<pre className="text-gray-800 font-mono text-sm overflow-auto whitespace-pre-wrap">
+{JSON.stringify(currentReport, null, 2)}
+</pre>
+</div>
+)}
+</div>
+<div className="p-4 border-t border-gray-200 bg-gray-50">
+<div className="flex flex-wrap gap-3 justify-end">
+<button
+onClick={downloadReport}
+className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300 shadow-sm hover:shadow-md"
+>
+📥 Descargar JSON
+</button>
+<button
+onClick={sendByWhatsApp}
+className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300 shadow-sm hover:shadow-md"
+>
+📱 Enviar por WhatsApp
+</button>
+<button
+onClick={() => setShowReportModal(false)}
+className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition duration-300"
+>
+Cerrar
+</button>
+</div>
+</div>
+</div>
+</div>
+)}
+        
         {showAddSellerModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-6 max-w-md w-full">
