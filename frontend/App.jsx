@@ -338,83 +338,143 @@ setCurrentBet({ lottery: '', digits: '2', number: '', amount: '', type: 'direct'
   };
   
   const generateTicket = async () => {
-    setShowConfirmModal(false);
-    
-    const ticket = {
-      ticketId: `TKT${Date.now()}`,
-      seller: currentUser.username,
-      bets: [...betList],
-      total: betList.reduce((sum, bet) => sum + parseInt(bet.amount), 0),
-      customerPhone,
-	  customerName,
-      timestamp: new Date()
-    };
+  setShowConfirmModal(false);
+  const ticketId = `TKT${Date.now()}`;
+  const total = betList.reduce((sum, bet) => sum + parseInt(bet.amount || 0), 0);
 
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/tickets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticketId: ticket.ticketId,
-          seller: ticket.seller,
-          bets: ticket.bets,
-          total: ticket.total,
-          customerPhone: ticket.customerPhone,
-		  customerName: ticket.customerName,
-          timestamp: ticket.timestamp
-        }),
-      });
-      
-      if (!response.ok) throw new Error('Error al guardar el ticket');
-      
-      let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀\n`;
-      message += `Tiquete: ${ticket.ticketId}\n`;
-      message += `Fecha: ${new Date(ticket.timestamp).toLocaleString()}\n`;
-      message += `Vendedor: ${ticket.seller}\n`;
-      message += `Total: $${ticket.total.toLocaleString()}\n`;
-      message += `Detalles de apuestas:\n`;
-      ticket.bets.forEach((bet, index) => {
-      let betType = '';
-      if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
-      else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
-      else if (bet.digits === '3') {
-      betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
-      }
-      else if (bet.digits === '4') {
-      betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
-      }
-      else if (bet.digits === '5') {
-      betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
-      bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
-      bet.type === 'first4' ? ' (4 Cifras Directas)' : 
-      ' (4 Cifras Combinadas)';
-      }
+  // Sanitizar y validar datos antes de enviar
+  try {
+  // Validar apuestas
+  if (betList.length === 0) {
+  throw new Error('No hay apuestas para generar el ticket');
+  }
 
-      message += `${index + 1}. ${bet.lottery} - ${bet.number}${betType} - $${parseInt(bet.amount).toLocaleString()}
-      `;
-      });
+  if (!customerPhone || customerPhone.trim() === '') {
+  throw new Error('Por favor ingrese el número del cliente');
+  }
 
-      setTicketToBeSent({
-        ticket,
-        message,
-        customerName,
-        customerPhone
-      });
-      
-      setShowSendMethodModal(true);
-      
-      const ticketWithCustomer = { ...ticket, customerName };
-      setTodayTickets(prev => [...prev, ticketWithCustomer]);
-      
-      setBetList([]);
-      setCustomerPhone('');
-      setCustomerName('');
-      
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al guardar el ticket. Por favor intenta nuevamente.');
-    }
-  };  
+  // Sanitizar cada apuesta
+  const sanitizedBets = betList.map(bet => {
+  // Validar que el número tenga la longitud correcta
+  const digits = parseInt(bet.digits || '2');
+  let cleanedNumber = bet.number.replace(/\D/g, '');
+  if (cleanedNumber.length > digits) {
+  cleanedNumber = cleanedNumber.substring(0, digits);
+  }
+  if (cleanedNumber.length < digits) {
+  cleanedNumber = cleanedNumber.padStart(digits, '0');
+  }
+
+  // Asegurar que el tipo de apuesta exista
+  const validTypes = ['direct', 'combined', 'first4', 'first4combined', 'single'];
+  const betType = validTypes.includes(bet.type) ? bet.type : 'direct';
+
+  return {
+  lottery: bet.lottery.trim(),
+  digits: digits.toString(),
+  number: cleanedNumber,
+  amount: parseInt(bet.amount || 0),
+  type: betType
+  };
+  });
+
+  // Sanitizar teléfono del cliente
+  let cleanedPhone = customerPhone.replace(/\D/g, '');
+  if (cleanedPhone.length < 10) {
+  throw new Error('El número de teléfono debe tener al menos 10 dígitos');
+  }
+  if (cleanedPhone.length > 10) {
+  cleanedPhone = cleanedPhone.substring(cleanedPhone.length - 10);
+  }
+
+  const response = await fetch(`${BACKEND_URL}/api/tickets`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+  seller: currentUser.username,
+  bets: sanitizedBets,
+  total: total,
+  customerPhone: cleanedPhone,
+  customerName: customerName.trim() || 'Cliente'
+  }),
+  });
+
+  if (!response.ok) {
+  const errorData = await response.json();
+  console.error('Error del servidor:', errorData);
+  throw new Error(errorData.details || 'Error al guardar el ticket');
+  }
+
+  const savedTicket = await response.json();
+  console.log('✅ Ticket guardado exitosamente:', savedTicket);
+
+  // Generar mensaje para WhatsApp/SMS
+  let message = `¡Gracias por jugar con Mi Suerte Online${customerName ? `, ${customerName}` : ''}! 🍀
+  `;
+  message += `Tiquete: ${savedTicket.ticketId}
+  `;
+  message += `Fecha: ${new Date(savedTicket.timestamp).toLocaleString('es-CO')}
+  `;
+  message += `Vendedor: ${savedTicket.seller}
+  `;
+  message += `Total: $${savedTicket.total.toLocaleString()}
+  `;
+  message += `Detalles de apuestas:
+  `;
+
+  savedTicket.bets.forEach((bet, index) => {
+  let betType = '';
+  if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
+  else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
+  else if (bet.digits === '3') {
+  betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
+  }
+  else if (bet.digits === '4') {
+  betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
+  }
+  else if (bet.digits === '5') {
+  betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
+  bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+  bet.type === 'first4' ? ' (4 Cifras Directas)' : 
+  ' (4 Cifras Combinadas)';
+  }
+
+  message += `${index + 1}. ${bet.lottery} - ${bet.number}${betType} - $${bet.amount.toLocaleString()}
+  `;
+  });
+
+  setTicketToBeSent({
+  ticket: savedTicket,
+  message,
+  customerName: savedTicket.customerName,
+  customerPhone: savedTicket.customerPhone
+  });
+
+  setShowSendMethodModal(true);
+
+  // Actualizar el estado local con el ticket guardado
+  setTodayTickets(prev => [...prev, savedTicket]);
+  setBetList([]);
+  setCustomerPhone('');
+  setCustomerName('');
+
+  alert('¡Ticket generado exitosamente!');
+  } catch (error) {
+  console.error('❌ Error completo al generar ticket:', error);
+  let errorMessage = 'Error al guardar el ticket. Por favor verifica:';
+  if (error.message.includes('telefono')) {
+  errorMessage = 'El número de teléfono no es válido. Debe tener 10 dígitos.';
+  } else if (error.message.includes('apuestas')) {
+  errorMessage = 'No hay apuestas válidas en el ticket.';
+  } else if (error.message.includes('monto')) {
+  errorMessage = 'Uno o más montos son inválidos.';
+  } else {
+  errorMessage = error.message || 'Error desconocido. Intente nuevamente.';
+  }
+  alert(errorMessage);
+  setShowConfirmModal(true); // Mostrar modal de confirmación nuevamente para corrección
+  }
+  };
   
   const sendTicketByMethod = (method) => {
     if (!ticketToBeSent) return;
@@ -1633,49 +1693,49 @@ lottery.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             </div>
           )}
           {activeTab === 'create' && (
-            <div className="bg-gray-800 text-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold mb-4">Crear Nueva Apuesta</h2>
-              <div className="mb-4 flex space-x-4">
-                <button
-                  onClick={() => setBetMode('single')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    betMode === 'single'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  Apuesta Individual
-                </button>
-                <button
-                  onClick={() => setBetMode('multiple')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    betMode === 'multiple'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  Apuesta Múltiple
-                </button>
-              </div>
-              {betMode === 'single' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">Seleccionar Lotería</label>
-                    <select
-                      value={currentBet.lottery}
-                      onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
-                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                      disabled={lotteries.filter(l => l.active).length === 0}
-                    >
-                      <option value="">Seleccione una lotería</option>
-                      {lotteries.filter(l => l.active).map(lottery => (
-                        <option key={lottery.id} value={lottery.name}>{lottery.name} - {lottery.time}</option>
-                      ))}
-                    </select>
-                    {lotteries.filter(l => l.active).length === 0 && (
-                      <p className="text-red-600 text-sm mt-2">No hay loterías activas en este momento</p>
-                    )}
-                  </div>
+<div className="bg-gray-800 text-white rounded-xl shadow-sm p-6">
+<h2 className="text-xl font-bold mb-4">Crear Nueva Apuesta</h2>
+<div className="mb-4 flex space-x-4">
+<button
+onClick={() => setBetMode('single')}
+className={`px-4 py-2 rounded-lg text-sm font-medium ${
+betMode === 'single'
+? 'bg-blue-600 text-white'
+: 'bg-gray-200 text-gray-700'
+}`}
+>
+Apuesta Individual
+</button>
+<button
+onClick={() => setBetMode('multiple')}
+className={`px-4 py-2 rounded-lg text-sm font-medium ${
+betMode === 'multiple'
+? 'bg-blue-600 text-white'
+: 'bg-gray-200 text-gray-700'
+}`}
+>
+Apuesta Múltiple
+</button>
+</div>
+{betMode === 'single' ? (
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label className="block text-sm font-medium text-white mb-2">Seleccionar Lotería</label>
+<select
+value={currentBet.lottery}
+onChange={(e) => setCurrentBet({...currentBet, lottery: e.target.value})}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+disabled={lotteries.filter(l => l.active).length === 0}
+>
+<option value="">Seleccione una lotería</option>
+{lotteries.filter(l => l.active).map(lottery => (
+<option key={lottery.id} value={lottery.name}>{lottery.name} - {lottery.time}</option>
+))}
+</select>
+{lotteries.filter(l => l.active).length === 0 && (
+<p className="text-red-600 text-sm mt-2">No hay loterías activas en este momento</p>
+)}
+</div>
 <div className="space-y-4">
 <div>
 <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad de Apuesta</label>
@@ -1767,7 +1827,7 @@ min="100"
 Máximo permitido: ${getMaxBetAmount(currentBet.digits, currentBet.type).toLocaleString()} para esta modalidad
 </p>
 )}
-{currentBet.digits === '1' && parseInt(currentBet.amount) >= 1000 && (
+{currentBet.digits === '1' && parseInt(currentBet.amount) >= 100 && (
 <p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 5).toLocaleString()} si ganas</p>
 )}
 {currentBet.digits === '2' && parseInt(currentBet.amount) >= 100 && (
@@ -1788,112 +1848,141 @@ Máximo permitido: ${getMaxBetAmount(currentBet.digits, currentBet.type).toLocal
 {currentBet.digits === '5' && currentBet.type === 'direct' && parseInt(currentBet.amount) >= 100 && (
 <p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${Math.round(parseInt(currentBet.amount) * 38000).toLocaleString()} si ganas</p>
 )}
+{currentBet.digits === '5' && ['first4', 'first4combined'].includes(currentBet.type) && parseInt(currentBet.amount) >= 100 && (
+<p className="text-yellow-600 text-sm mt-2">💡 Premio aproximado: ${
+currentBet.type === 'first4' ? 
+Math.round(parseInt(currentBet.amount) * 4500).toLocaleString() : 
+Math.round(parseInt(currentBet.amount) * 208).toLocaleString()
+} si ganas</p>
+)}
 </div>
 </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">Número Apostado</label>
-                    <input
-                      type="text"
-                      value={currentBet.number}
-                      onChange={(e) => handleNumberChange(e.target.value.replace(/\D/g, ''))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                      placeholder={`Ej: ${'12'.substring(0, parseInt(currentBet.digits))}`}
-                      maxLength={parseInt(currentBet.digits)}
-                    />
-                    <p className="text-sm text-white mt-1">Debe ingresar exactamente {currentBet.digits} dígito{parseInt(currentBet.digits) > 1 ? 's' : ''}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">Valor de la Apuesta (COP)</label>
-                    <input
-                      type="number"
-                      value={currentBet.amount}
-                      onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
-                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                      placeholder="Ej: 5000"
-                    />
-                    {parseInt(currentBet.amount) > 20000 && (
-                      <p className="text-yellow-600 text-sm mt-2">Esta apuesta requiere aprobación del administrador</p>
-                    )}
-                    {parseInt(currentBet.digits) === 4 && parseInt(currentBet.amount) > 5000 && (
-                      <p className="text-red-600 text-sm mt-2">Máximo $5,000 para 4 cifras</p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-white mb-2">Seleccionar Loterías</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                      {lotteries.filter(l => l.active).map(lottery => (
-                        <label key={lottery.name} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={multiLotteries.includes(lottery.name)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setMultiLotteries([...multiLotteries, lottery.name]);
-                              } else {
-                                setMultiLotteries(multiLotteries.filter(name => name !== lottery.name));
-                              }
-                            }}
-                            className="mr-2"
-                          />
-                          <span className="text-sm text-white">{lottery.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad</label>
-                      <select
-                        value={currentBet.digits}
-                        onChange={(e) => setCurrentBet({...currentBet, digits: e.target.value})}
-                       className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      >
-                        <option value="2">2 Cifras</option>
-                        <option value="3">3 Cifras</option>
-                        <option value="4">4 Cifras</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Número</label>
-                      <input
-                        type="text"
-                        value={currentBet.number}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          if (val.length <= parseInt(currentBet.digits)) {
-                            setCurrentBet({...currentBet, number: val});
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
-                        placeholder="Ej: 12"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Monto por Lotería</label>
-                      <input
-                        type="number"
-                        value={currentBet.amount}
-                        onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
-                       className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
-                        placeholder="Ej: 2000"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="mt-6">
-                <button
-                  onClick={handleAddBet}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-300 font-semibold"
-                >
-                  {betMode === 'single' ? 'Añadir Apuesta' : `Añadir ${multiLotteries.length} Apuestas`}
-                </button>
-              </div>
-            </div>
-          )}
+</div>
+) : (
+<div className="space-y-4">
+<div className="mb-4">
+<label className="block text-sm font-medium text-white mb-2">Seleccionar Loterías</label>
+<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+{lotteries.filter(l => l.active).map(lottery => (
+<label key={lottery.name} className="flex items-center p-2 hover:bg-gray-700 rounded">
+<input
+type="checkbox"
+checked={multiLotteries.includes(lottery.name)}
+onChange={(e) => {
+if (e.target.checked) {
+setMultiLotteries([...multiLotteries, lottery.name]);
+} else {
+setMultiLotteries(multiLotteries.filter(name => name !== lottery.name));
+}
+}}
+className="mr-2 h-4 w-4 text-blue-600"
+/>
+<span className="text-sm text-white">{lottery.name} - {lottery.time}</span>
+</label>
+))}
+</div>
+</div>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div>
+<label className="block text-sm font-medium text-gray-700 mb-2">Modalidad de Apuesta</label>
+<select
+value={currentBet.digits}
+onChange={(e) => {
+const newDigits = e.target.value;
+let newType = 'direct';
+if (newDigits === '1') newType = 'single';
+if (newDigits === '3' || newDigits === '4' || newDigits === '5') newType = 'direct';
+
+setCurrentBet({
+...currentBet,
+digits: newDigits,
+type: newType,
+number: currentBet.number.slice(0, parseInt(newDigits))
+});
+}}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+>
+<option value="1">1 Cifra (Uña)</option>
+<option value="2">2 Cifras (Pata)</option>
+<option value="3">3 Cifras</option>
+<option value="4">4 Cifras</option>
+<option value="5">5 Cifras (Nueva)</option>
+</select>
+</div>
+
+{/* Tipos de apuesta para modo múltiple */}
+{(currentBet.digits === '3' || currentBet.digits === '4' || currentBet.digits === '5') && (
+<div>
+<label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Apuesta</label>
+<select
+value={currentBet.type || 'direct'}
+onChange={(e) => setCurrentBet({...currentBet, type: e.target.value})}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+>
+<option value="direct">Directo (orden exacto)</option>
+<option value="combined">Combinado (cualquier orden)</option>
+{currentBet.digits === '5' && (
+<>
+<option value="first4">4 Cifras Directas</option>
+<option value="first4combined">4 Cifras Combinadas</option>
+</>
+)}
+</select>
+</div>
+)}
+
+<div>
+<label className="block text-sm font-medium text-gray-700 mb-2">Número</label>
+<input
+type="text"
+value={currentBet.number}
+onChange={(e) => {
+const val = e.target.value.replace(/\D/g, '');
+if (val.length <= parseInt(currentBet.digits)) {
+setCurrentBet({...currentBet, number: val});
+}
+}}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+placeholder={`Ej: ${'12345'.substring(0, parseInt(currentBet.digits))}`}
+maxLength={parseInt(currentBet.digits)}
+/>
+<p className="text-xs text-gray-500 mt-1">
+Ingresa exactamente {currentBet.digits} {currentBet.digits === '1' ? 'dígito' : 'dígitos'}
+</p>
+</div>
+<div>
+<label className="block text-sm font-medium text-gray-700 mb-2">Monto por Lotería (COP)</label>
+<input
+type="number"
+value={currentBet.amount}
+onChange={(e) => setCurrentBet({...currentBet, amount: e.target.value})}
+className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+placeholder="Ej: 2000"
+min="100"
+/>
+{/* Validación para modo múltiple */}
+{parseInt(currentBet.amount) > getMaxBetAmount(currentBet.digits, currentBet.type) && (
+<p className="text-red-600 text-xs mt-1">
+Máximo: ${getMaxBetAmount(currentBet.digits, currentBet.type).toLocaleString()} por lotería
+</p>
+)}
+<p className="text-xs text-gray-500 mt-1">
+Total para {multiLotteries.length} loterías: ${multiLotteries.length * parseInt(currentBet.amount || 0).toLocaleString()}
+</p>
+</div>
+</div>
+</div>
+)}
+<div className="mt-6">
+<button
+onClick={handleAddBet}
+className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-300 font-semibold"
+>
+{betMode === 'single' ? 'Añadir Apuesta' : `Añadir ${multiLotteries.length} Apuestas`}
+</button>
+</div>
+</div>
+)}
           {activeTab === 'close' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Cierre de Caja</h2>
@@ -2238,84 +2327,84 @@ Máximo permitido: ${getMaxBetAmount(currentBet.digits, currentBet.type).toLocal
             </div>
           )}
 		  {showTicketDetailsModal && selectedTicketDetails && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-gray-900">Detalles del Ticket</h3>
-                  <button
-                    onClick={() => setShowTicketDetailsModal(false)}
-                    className="text-gray-500 hover:text-gray-700 font-bold"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <p className="text-sm text-gray-600">ID del Ticket</p>
-                      <p className="font-mono font-bold">{selectedTicketDetails.ticketId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Fecha y Hora</p>
-                      <p>{new Date(selectedTicketDetails.timestamp).toLocaleString('es-CO')}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Vendedor</p>
-                      <p>{selectedTicketDetails.seller}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Cliente</p>
-                      <p>{selectedTicketDetails.customerName || 'Sin nombre'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Teléfono</p>
-                      <p>+57{selectedTicketDetails.customerPhone}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Total</p>
-                      <p className="text-lg font-bold text-green-700">${selectedTicketDetails.total.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <h4 className="font-bold text-gray-800 mb-3">Apuestas:</h4>
-                  <div className="space-y-2">
-                    {selectedTicketDetails.bets && selectedTicketDetails.bets.map((bet, idx) => {
-                    let betType = '';
-                    if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
-                    else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
-                    else if (bet.digits === '3') {
-                    betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
-                    }
-                    else if (bet.digits === '4') {
-                    betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
-                    }
-                    else if (bet.digits === '5') {
-                    betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
-                    bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
-                    bet.type === 'first4' ? ' (4 Cifras Directas)' : 
-                    ' (4 Cifras Combinadas)';
-                    }
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+<div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+<div className="p-6 border-b border-gray-200 flex justify-between items-center">
+<h3 className="text-xl font-bold text-gray-900">Detalles del Ticket</h3>
+<button
+onClick={() => setShowTicketDetailsModal(false)}
+className="text-gray-500 hover:text-gray-700 font-bold"
+>
+×
+</button>
+</div>
+<div className="p-6">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div>
+<p className="text-sm text-gray-600">ID del Ticket</p>
+<p className="font-mono font-bold">{selectedTicketDetails.ticketId}</p>
+</div>
+<div>
+<p className="text-sm text-gray-600">Fecha y Hora</p>
+<p>{new Date(selectedTicketDetails.timestamp).toLocaleString('es-CO')}</p>
+</div>
+<div>
+<p className="text-sm text-gray-600">Vendedor</p>
+<p>{selectedTicketDetails.seller}</p>
+</div>
+<div>
+<p className="text-sm text-gray-600">Cliente</p>
+<p>{selectedTicketDetails.customerName || 'Sin nombre'}</p>
+</div>
+<div>
+<p className="text-sm text-gray-600">Teléfono</p>
+<p>+57{selectedTicketDetails.customerPhone}</p>
+</div>
+<div>
+<p className="text-sm text-gray-600">Total</p>
+<p className="text-lg font-bold text-green-700">${selectedTicketDetails.total.toLocaleString()}</p>
+</div>
+</div>
+<h4 className="font-bold text-gray-800 mb-3">Apuestas:</h4>
+<div className="space-y-2">
+{selectedTicketDetails.bets && selectedTicketDetails.bets.map((bet, idx) => {
+let betType = '';
+if (bet.digits === '1') betType = ' (1 Cifra - Uña)';
+else if (bet.digits === '2') betType = ' (2 Cifras - Pata)';
+else if (bet.digits === '3') {
+betType = bet.type === 'combined' ? ' (3 Cifras - Combinado)' : ' (3 Cifras - Directo)';
+}
+else if (bet.digits === '4') {
+betType = bet.type === 'combined' ? ' (4 Cifras - Combinado)' : ' (4 Cifras - Directo)';
+}
+else if (bet.digits === '5') {
+betType = bet.type === 'direct' ? ' (5 Cifras - Directo)' : 
+bet.type === 'combined' ? ' (5 Cifras - Combinado)' :
+bet.type === 'first4' ? ' (4 Cifras Directas)' : 
+' (4 Cifras Combinadas)';
+}
 
-                    return (
-                    <div key={idx} className="border border-gray-200 rounded p-3 bg-gray-50">
-                    <p className="font-medium">{bet.lottery}</p>
-                    <p>Número: <span className="font-mono">{bet.number}</span>{betType}</p>
-                    <p>Monto: ${parseInt(bet.amount).toLocaleString()}</p>
-                    </div>
-                    );
-                    })}
-                  </div>
-                </div>
-                <div className="p-6 border-t border-gray-200 text-right">
-                  <button
-                    onClick={() => setShowTicketDetailsModal(false)}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+return (
+<div key={idx} className="border border-gray-200 rounded p-3 bg-gray-50">
+<p className="font-medium">{bet.lottery}</p>
+<p>Número: <span className="font-mono">{bet.number}</span>{betType}</p>
+<p>Monto: ${parseInt(bet.amount).toLocaleString()}</p>
+</div>
+);
+})}
+</div>
+</div>
+<div className="p-6 border-t border-gray-200 text-right">
+<button
+onClick={() => setShowTicketDetailsModal(false)}
+className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
+>
+Cerrar
+</button>
+</div>
+</div>
+</div>
+)}
 		</div>
       </div>
     );

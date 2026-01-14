@@ -105,10 +105,10 @@ const ticketSchema = new mongoose.Schema({
   seller: String,
   bets: [{
     lottery: String,
-    digits: String,
-    number: String,
-    amount: Number,
-    type: { type: String, default: 'direct' } // Nuevo campo para tipo de apuesta
+    digits: { type: String, required: true },
+    number: { type: String, required: true },
+    amount: { type: Number, required: true },
+    type: { type: String, default: 'direct' } // Nuevo campo obligatorio
   }],
   total: Number,
   customerPhone: String,
@@ -183,25 +183,94 @@ app.post('/api/login', async (req, res) => {
 // Ruta para guardar un ticket
 app.post('/api/tickets', async (req, res) => {
   try {
-    const { bets } = req.body;
+    const { bets, ...rest } = req.body;
     
-    // Validar que cada apuesta tenga el campo type
-    const validatedBets = bets.map(bet => ({
-      ...bet,
-      type: bet.type || 'direct' // Valor por defecto si no viene
-    }));
+    // Validar que haya apuestas
+    if (!bets || !Array.isArray(bets) || bets.length === 0) {
+      return res.status(400).json({ error: 'El ticket debe contener al menos una apuesta' });
+    }
+    
+    // Tipos válidos de apuestas
+    const validTypes = ['direct', 'combined', 'first4', 'first4combined', 'single'];
+    
+    // Validar y sanitizar cada apuesta
+    const validatedBets = bets.map(bet => {
+      // Validar campos requeridos
+      if (!bet.lottery || !bet.digits || !bet.number || !bet.amount) {
+        throw new Error('Cada apuesta debe tener lotería, dígitos, número y monto');
+      }
+      
+      // Validar dígitos
+      const digits = parseInt(bet.digits);
+      if (isNaN(digits) || digits < 1 || digits > 5) {
+        throw new Error('Las cifras deben estar entre 1 y 5');
+      }
+      
+      // Validar número (debe tener la longitud correcta)
+      let cleanedNumber = bet.number.toString().replace(/\D/g, '');
+      if (cleanedNumber.length > digits) {
+        cleanedNumber = cleanedNumber.substring(0, digits);
+      }
+      if (cleanedNumber.length < digits) {
+        // Rellenar con ceros a la izquierda si es necesario
+        cleanedNumber = cleanedNumber.padStart(digits, '0');
+      }
+      
+      // Validar monto
+      const amount = parseInt(bet.amount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error('El monto debe ser un número positivo');
+      }
+      
+      // Validar tipo de apuesta
+      const betType = validTypes.includes(bet.type) ? bet.type : 'direct';
+      
+      return {
+        lottery: bet.lottery.trim(),
+        digits: digits.toString(),
+        number: cleanedNumber,
+        amount: amount,
+        type: betType
+      };
+    });
+    
+    // Calcular total si no viene en la solicitud o si hay discrepancia
+    const calculatedTotal = validatedBets.reduce((sum, bet) => sum + bet.amount, 0);
+    const providedTotal = rest.total ? parseInt(rest.total) : null;
+    const total = providedTotal && Math.abs(providedTotal - calculatedTotal) <= 10 ? 
+                 providedTotal : calculatedTotal;
+    
+    // Validar teléfono del cliente
+    let customerPhone = (rest.customerPhone || '').trim().replace(/\D/g, '');
+    if (customerPhone.length < 10) {
+      customerPhone = '3001234567'; // Teléfono por defecto si no es válido
+    }
     
     const ticketData = {
-      ...req.body,
-      bets: validatedBets
+      ticketId: `TKT${Date.now()}`,
+      seller: rest.seller ? rest.seller.trim() : 'unknown',
+      bets: validatedBets,
+      total: total,
+      customerPhone: customerPhone,
+      customerName: rest.customerName ? rest.customerName.trim() : 'Cliente',
+      timestamp: new Date()
     };
     
     const ticket = new Ticket(ticketData);
     await ticket.save();
+    
+    console.log('✅ Ticket guardado exitosamente:', ticket.ticketId);
     res.status(201).json(ticket);
   } catch (error) {
-    console.error('Error al guardar ticket:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al guardar ticket:', error);
+    console.error('Datos recibidos:', req.body); // Para debugging
+    
+    // Enviar mensaje de error más detallado al frontend
+    res.status(400).json({ 
+      error: 'Error al guardar ticket',
+      details: error.message,
+      validation: error.errors ? Object.keys(error.errors).map(key => error.errors[key].message) : null
+    });
   }
 });
 
